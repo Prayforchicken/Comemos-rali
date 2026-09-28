@@ -32,7 +32,8 @@ function aFecha(fecha: string, hhmm: string) {
 }
 
 /** Calcula los avisos de los próximos días a partir del plan y las mascotas. */
-export function calcularAvisos({ plan, juego, decisiones }: Datos, ahora = new Date()): Aviso[] {
+export function calcularAvisos(datos: Datos, ahora = new Date()): Aviso[] {
+  const { plan, juego } = datos;
   const hoy = todayInTimezone(plan.settings.timezone);
   const mascota = juego.mascotas.find((m) => m.id === juego.activaId) ?? juego.mascotas[0];
   const quien = mascota?.nombre ?? "Tu gatito";
@@ -41,12 +42,13 @@ export function calcularAvisos({ plan, juego, decisiones }: Datos, ahora = new D
     const fecha = shiftIsoDate(hoy, i);
     const base = Number(fecha.replaceAll("-", "").slice(2)) * 10; // id estable por día
     if (juego.avisos.comidas) {
-      diaDecidido(plan, decisiones, fecha).forEach((comida, j) => {
+      diaDecidido(datos, fecha).forEach((comida, j) => {
+        const puntos = comida.bonus ? 10 : 8;
         avisos.push({
           id: base + j,
           cuando: aFecha(fecha, comida.time),
-          titulo: `${slotLabel(comida.slot)}: ${comida.template.shortName}`,
-          texto: comida.libre ? `${quien} te guarda +10 huellitas. ¡Que aproveche!` : `${comida.grams} g · ${quien} te guarda +10 huellitas.`,
+          titulo: `${slotLabel(comida.slot)}: ${comida.nombre}`,
+          texto: comida.libre ? `${quien} te guarda +${puntos} huellitas. ¡Que aproveche!` : `${comida.partes.map((x) => `${x.grams} g`).join(" + ")} · ${quien} te guarda +${puntos} huellitas.`,
         });
       });
     }

@@ -124,7 +124,7 @@ export function Ajustes({ datos, cambiar }: PantallaProps) {
         texto={recuperar ? `“${recuperar.nombre}”: ${resumen(recuperar.datos)}. Sustituye todo lo que hay ahora en este móvil (${resumen(datos)}).` : ""}
         si="Sí, recuperar" alConfirmar={() => { if (recuperar) { cambiar(() => recuperar.datos); pegatina({ motivo: "¡Copia recuperada!", extra: "Todo ha vuelto a su sitio" }); } setRecuperar(null); }} />
       <Confirmar abierta={reinicio} cerrar={() => setReinicio(false)} titulo="¿Empezar de cero?" texto="Se borra todo lo de este móvil: plan, diario, recetas y animalitos. Guarda una copia antes si quieres poder volver." si="Sí, empezar de cero" alConfirmar={() => { cambiar(() => datosIniciales()); setReinicio(false); }} />
-      <p className="nota centro">Comemos · Rali · versión de pruebas 0.5</p>
+      <p className="nota centro">Comemos · Rali · versión de pruebas 0.6</p>
     </div>
   );
 }

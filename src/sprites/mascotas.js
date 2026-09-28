@@ -313,9 +313,10 @@
           linea('M160 44 q6 -6 0 -12 q-6 -6 0 -12', '#8DB57A', 3.2) + linea('M174 52 q6 -6 0 -12 q-6 -6 0 -12', '#8DB57A', 3.2) +
           `<g transform="translate(34 44)">` + plano(E(-4, -4, 5, 3), '#E7F3FB', 1.6) + plano(E(4, -4, 5, 3), '#E7F3FB', 1.6) + `<circle r="3.2" fill="${OUT}"/></g>`;
       case 'cansado':
-        return `<g font-family="Gaegu, 'Comic Sans MS', cursive" font-weight="700" fill="#D8CCF2" stroke="${OUT}" stroke-width="2" paint-order="stroke">` +
-          `<text x="156" y="44" font-size="20">z</text></g>` +
-          linea('M34 40 q4 6 0 10', '#A9D4F2', 3);
+        // Sin pilas: una "z" pequeñita y una gota de sudor.
+        return `<g font-family="Gaegu, 'Comic Sans MS', cursive" font-weight="700" fill="#D8CCF2" stroke="${OUT}" stroke-width="2.5" paint-order="stroke">` +
+          `<text x="150" y="52" font-size="30">z</text></g>` +
+          plano(P('M44 44 Q36 58 44 64 Q52 58 44 44 Z'), '#CFEAFB', 2.4);
       case 'dormido':
         return `<g font-family="Gaegu, 'Comic Sans MS', cursive" font-weight="700" fill="#D8CCF2" stroke="${OUT}" stroke-width="2.5" paint-order="stroke">` +
           `<text x="146" y="50" font-size="24">z</text><text x="162" y="34" font-size="34">Z</text></g>`;

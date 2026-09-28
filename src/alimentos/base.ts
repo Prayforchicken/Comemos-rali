@@ -50,6 +50,15 @@ const FILAS: Fila[] = [
   ["leche-semi", "Leche semidesnatada", 46, 3.2, 4.8, 1.6, 0, ["1 vaso", 250]],
   ["platano", "Plátano", 89, 1.1, 22.8, 0.3, 2.6, ["1 unidad", 120]],
   ["manzana", "Manzana", 52, 0.3, 13.8, 0.2, 2.4, ["1 unidad", 180]],
+  // Para montar recetas de congelador y desayunos
+  ["hamburguesa-vegetal-sola", "Hamburguesa vegetal (solo la hamburguesa)", 210, 16, 9, 12, 4, ["1 unidad", 110]],
+  ["pan-hamburguesa", "Pan de hamburguesa", 275, 9, 49, 4.5, 2.5, ["1 pan", 60]],
+  ["lechuga", "Lechuga", 15, 1.4, 2.9, 0.2, 1.3, ["unas hojas", 15]],
+  ["tomate", "Tomate", 18, 0.9, 3.9, 0.2, 1.2, ["2 rodajas", 30]],
+  ["mayonesa", "Mayonesa", 680, 1, 0.6, 75, 0, ["1 cucharada", 12]],
+  ["queso-lonchas", "Queso en lonchas", 300, 20, 2, 24, 0, ["1 loncha", 20]],
+  ["cafe", "Café solo", 2, 0.1, 0, 0, 0, ["1 taza", 50]],
+  ["azucar", "Azúcar", 400, 0, 100, 0, 0, ["1 sobre", 8]],
 ];
 
 export const BASE: Alimento[] = FILAS.map(([id, nombre, kcal, proteina, carbos, grasa, fibra, porcion]) => ({

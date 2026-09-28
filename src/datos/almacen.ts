@@ -7,6 +7,9 @@
    - `extras`: picoteos fuera de las 4 comidas, por fecha (alimentos + gramos).
    - `diario`: diario personal (cómo se siente y qué ha pasado), por fecha.
    - `recetas`: recetas propias con sus ingredientes. Cada una tiene también su copia en plan.mealTemplates.
+   - `menus`: el menú de comidas (qué receta y acompañamiento toca en cada toma), con la fecha desde la que vale.
+   - `cheats`: grupos de cheat meal sin pesar (Pizza, Hamburguesa del burger…).
+   - `semillas`: versión de las recetas de ejemplo ya añadidas (para no repetirlas si se borran).
    ============================================================ */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { freshDefaultState } from "../comemos/default-data";
@@ -16,6 +19,8 @@ import type { Juego } from "../juego/tipos";
 import type { Decisiones } from "../decisiones/decisiones";
 import type { Alimento, Item, RecetaPropia } from "../alimentos/tipos";
 import type { Diario } from "../diario/tipos";
+import { aPlantilla } from "../alimentos/nutricion";
+import { CHEATS_INICIALES, RECETAS_EJEMPLO, type GrupoCheat, type Menu } from "../menu/menu";
 
 export interface Datos {
   plan: AppState;
@@ -25,6 +30,9 @@ export interface Datos {
   recetas: Record<string, RecetaPropia>;
   extras: Record<string, Item[]>;
   diario: Diario;
+  menus: Menu[];
+  cheats: GrupoCheat[];
+  semillas: number;
 }
 
 const CLAVE = "comemos-rali-v1";
@@ -32,24 +40,42 @@ const CLAVE = "comemos-rali-v1";
 export function datosIniciales(): Datos {
   const plan = freshDefaultState();
   plan.settings.selectedPerson = "rali";
-  return { plan, juego: juegoInicial(), decisiones: {}, alimentos: {}, recetas: {}, extras: {}, diario: {} };
+  return sembrar({ plan, juego: juegoInicial(), decisiones: {}, alimentos: {}, recetas: {}, extras: {}, diario: {}, menus: [], cheats: CHEATS_INICIALES, semillas: 0 });
+}
+
+const obj = <T,>(v: unknown, def: T): T => (v && typeof v === "object" ? (v as T) : def);
+
+/** Rellena lo que falte (copias y datos de versiones anteriores) con los valores de inicio. */
+function completar(d: Partial<Datos>, base: Datos): Datos {
+  return sembrar({
+    plan: d.plan?.version === 1 ? { ...base.plan, ...d.plan } : base.plan,
+    juego: d.juego?.version === 1 ? { ...base.juego, ...d.juego, avisos: { ...base.juego.avisos, ...d.juego.avisos } } : base.juego,
+    decisiones: obj(d.decisiones, {}),
+    alimentos: obj(d.alimentos, {}),
+    recetas: obj(d.recetas, {}),
+    extras: obj(d.extras, {}),
+    diario: obj(d.diario, {}),
+    menus: Array.isArray(d.menus) ? d.menus : [],
+    cheats: Array.isArray(d.cheats) ? d.cheats : CHEATS_INICIALES,
+    semillas: typeof d.semillas === "number" ? d.semillas : 0,
+  });
+}
+
+/** Añade una sola vez las recetas de ejemplo (hamburguesa casera, café con galletas). Si se borran, no vuelven. */
+function sembrar(d: Datos): Datos {
+  if (d.semillas >= 1) return d;
+  const nuevas = RECETAS_EJEMPLO.filter((r) => !d.recetas[r.id]);
+  const recetas = { ...d.recetas };
+  for (const r of nuevas) recetas[r.id] = r;
+  const plantillas = [...d.plan.mealTemplates.filter((t) => !nuevas.some((r) => r.id === t.id)), ...nuevas.map(aPlantilla)];
+  return { ...d, recetas, plan: { ...d.plan, mealTemplates: plantillas }, semillas: 1 };
 }
 
 function cargar(): Datos {
   try {
     const raw = localStorage.getItem(CLAVE);
     if (!raw) return datosIniciales();
-    const d = JSON.parse(raw) as Partial<Datos>;
-    const base = datosIniciales();
-    return {
-      plan: d.plan?.version === 1 ? { ...base.plan, ...d.plan } : base.plan,
-      juego: d.juego?.version === 1 ? { ...base.juego, ...d.juego, avisos: { ...base.juego.avisos, ...d.juego.avisos } } : base.juego,
-      decisiones: d.decisiones && typeof d.decisiones === "object" ? d.decisiones : {},
-      alimentos: d.alimentos && typeof d.alimentos === "object" ? d.alimentos : {},
-      recetas: d.recetas && typeof d.recetas === "object" ? d.recetas : {},
-      extras: d.extras && typeof d.extras === "object" ? d.extras : {},
-      diario: d.diario && typeof d.diario === "object" ? d.diario : {},
-    };
+    return completar(JSON.parse(raw) as Partial<Datos>, datosIniciales());
   } catch {
     return datosIniciales();
   }
@@ -80,11 +106,7 @@ export function importar(texto: string, actual: Datos): Datos {
   const v = JSON.parse(texto);
   if (v?.app === "comemos-rali" && v.plan?.version === 1 && v.juego?.version === 1) {
     // Copias de versiones anteriores: lo que falte se rellena con los valores de inicio.
-    const base = juegoInicial();
-    return {
-      plan: v.plan, juego: { ...base, ...v.juego, avisos: { ...base.avisos, ...v.juego.avisos } },
-      decisiones: v.decisiones ?? {}, alimentos: v.alimentos ?? {}, recetas: v.recetas ?? {}, extras: v.extras ?? {}, diario: v.diario ?? {},
-    };
+    return completar(v, datosIniciales());
   }
   if (v?.version === 1 && v.profiles?.rali) return { ...actual, plan: { ...v, settings: { ...v.settings, selectedPerson: "rali" } } };
   throw new Error("Este JSON no es de Comemos ni de esta app.");

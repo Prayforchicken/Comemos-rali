@@ -45,7 +45,7 @@ const POR_PERSONALIDAD: Record<Personalidad, string[]> = {
   glotona: ["¿Qué hay de comer hoy?", "Huele a batch cooking… ¡me encanta!", "Si comes bien, yo como chuches. Es la ley."],
   mimosa: ["Eres mi persona favorita del mundo.", "¿Te he dicho hoy que te quiero?", "Un abrazo más, porfa."],
   curiosa: ["¿Qué es eso? ¿Y eso otro?", "He investigado la cocina. Sin comentarios.", "¿Hoy toca gimnasio? ¿Puedo mirar?"],
-  presumida: ["¿Has visto qué guapura la mía hoy?", "Este lazo me queda de maravilla.", "Hazme una foto, que salgo bien."],
+  presumida: ["¿Has visto qué guapura la mía hoy?", "Este look me queda de maravilla.", "Hazme una foto, que salgo bien."],
   gruñona: ["No te he echado de menos. Nada. Cero.", "Vale, puedes acariciarme. Un poco.", "Refunfuño, pero te quiero."],
 };
 
