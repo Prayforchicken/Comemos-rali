@@ -7,7 +7,7 @@ import { EFECTO_CHUCHE } from "../juego/reglas";
 import type { ChucheId } from "../juego/tipos";
 import { CHUCHES } from "../sprites/chuches.js";
 
-const QUIEN: Record<string, string> = { gatito: "gatito", rata: "ratita", mapache: "mapache", urraca: "urraca" };
+const QUIEN: Record<string, string> = { gatito: "gatito", rata: "ratita", mapache: "mapache", urraca: "urraca", cuervo: "cuervo" };
 
 export function Tienda({ datos, cambiar }: PantallaProps) {
   const { juego } = datos;

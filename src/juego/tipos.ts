@@ -1,10 +1,12 @@
 /* Tipos del juego de mascotas. Todo lo que se guarda vive en `Juego`. */
 
-export type Especie = "gatito" | "rata" | "mapache" | "urraca";
-export type Animo = "feliz" | "contento" | "triste" | "enfadado" | "hambriento" | "sucio" | "dormido";
+export type Especie = "gatito" | "rata" | "mapache" | "urraca" | "cuervo";
+export type Animo = "feliz" | "contento" | "triste" | "enfadado" | "hambriento" | "sucio" | "dormido" | "cansado";
 export type Accesorio = "ninguno" | "lazo" | "flor" | "gorro" | "gafas" | "bufanda";
-export type ChucheId = "caramelo" | "piruleta" | "pescadito" | "queso" | "galleta" | "brillito";
+export type ChucheId = "caramelo" | "piruleta" | "pescadito" | "queso" | "galleta" | "brillito" | "nuez";
 export type Necesidad = "hambre" | "limpieza" | "mimos" | "energia";
+/** Carácter de cada animalito: cambia lo que dice (ver juego/frases.ts). */
+export type Personalidad = "dormilona" | "glotona" | "mimosa" | "curiosa" | "presumida" | "gruñona";
 
 /** 0–100. Nunca baja de SUELO_NECESIDAD: las mascotas no mueren ni enferman. */
 export type Necesidades = Record<Necesidad, number>;
@@ -23,6 +25,8 @@ export interface Mascota {
   alegreHasta?: string;
   /** Minutos acumulados con todas las necesidades bien cubiertas (para traer un regalo). */
   cuidadoMin?: number;
+  /** Carácter. Los animalitos de versiones anteriores lo reciben al vuelo (ver personalidadDe). */
+  personalidad?: Personalidad;
 }
 
 /** Chuche para Rali que trae un animalito bien cuidado. Al canjearla, Adrián compra algo rico. */

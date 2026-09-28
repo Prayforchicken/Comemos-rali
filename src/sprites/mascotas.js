@@ -2,8 +2,8 @@
 /* ============================================================
    Mascotas de Rali · generador de sprites SVG  (v2 · estilo "monstruito de bolsillo")
    mascota({ especie, animo, pelaje, accesorio, tam }) -> string SVG
-   especie:  'gatito' | 'rata' | 'mapache' | 'urraca'
-   animo:    'feliz' | 'contento' | 'triste' | 'enfadado' | 'hambriento' | 'sucio' | 'dormido'
+   especie:  'gatito' | 'rata' | 'mapache' | 'urraca' | 'cuervo'
+   animo:    'feliz' | 'contento' | 'triste' | 'enfadado' | 'hambriento' | 'sucio' | 'dormido' | 'cansado'
    pelaje:   clave de PELAJES[especie]
    accesorio:'ninguno' | 'lazo' | 'flor' | 'gorro' | 'gafas' | 'bufanda'
 
@@ -11,7 +11,7 @@
    - Silueta reconocible en negro (orejas, cola, penacho = firma de cada especie).
    - Contorno único grueso (4px) en ciruela oscuro. Sombreado cel de un solo tono abajo-derecha.
    - Ojos pequeños y ovalados con un brillo. La emoción la dan los párpados y la boca.
-   - La urraca no tiene boca: se expresa solo con los ojos.
+   - La urraca y el cuervo no tienen boca: se expresan solo con los ojos.
    - Nunca hay estado "muerto": lo peor es gruñón o sucio.
    ============================================================ */
 
@@ -44,6 +44,12 @@
       clasica:    { nombre: 'Clásica',    cuerpo: '#2F2B3E', sombra: '#1E1B29', marca: '#5AA6D6', panza: '#FFFFFF' },
       medianoche: { nombre: 'Medianoche', cuerpo: '#352C52', sombra: '#221C38', marca: '#A48BE8', panza: '#FFFFFF' },
       aurora:     { nombre: 'Aurora',     cuerpo: '#2C3547', sombra: '#1C2332', marca: '#5CC9A8', panza: '#FFFFFF' },
+    },
+    // Cuervo: todo oscuro con un brillo de color en las plumas; la corneja es gris con capucha negra.
+    cuervo: {
+      noche:   { nombre: 'Noche',   cuerpo: '#34303F', sombra: '#211E29', marca: '#7C8CE8', panza: '#4A4558' },
+      ciruela: { nombre: 'Ciruela', cuerpo: '#3A2F45', sombra: '#261E2E', marca: '#C58BE0', panza: '#52465E' },
+      corneja: { nombre: 'Corneja', cuerpo: '#A29DAE', sombra: '#817B8F', marca: '#34303F', panza: '#C9C4D3' },
     },
   };
 
@@ -90,6 +96,7 @@
     if (animo === 'triste') { ye = y - ery * .15; yi = y - ery * .95; }
     if (animo === 'enfadado') { ye = y - ery * 1.0; yi = y - ery * .05; }
     if (animo === 'sucio') { ye = y - ery * .25; yi = y - ery * .25; }
+    if (animo === 'cansado') { ye = y + ery * .05; yi = y + ery * .05; }
     if (ye !== undefined) {
       s += `<path d="M${ext} ${top} L${int} ${top} L${int} ${yi} L${ext} ${ye} Z" fill="${c.piel}"/>`;
       s += linea(`M${ext + lado * 2} ${ye + (animo === 'sucio' ? 0 : 1)} L${int - lado * 2} ${yi}`, claro ? OUT : OUT, 3.5);
@@ -116,6 +123,7 @@
           plano(P(`M${mx + 9} ${my + 4} Q${mx + 12} ${my + 12} ${mx + 9} ${my + 16} Q${mx + 5} ${my + 12} ${mx + 9} ${my + 4}Z`), '#CFEAFB', 2);
       case 'sucio': return linea(`M${mx - 8} ${my + 2} q4 -4 8 0 q4 4 8 0`, OUT, 3);
       case 'dormido': return linea(`M${mx - 4} ${my + 2} L${mx + 4} ${my + 2}`, OUT, 3);
+      case 'cansado': return plano(E(mx, my + 3, 4, 3.5), BOCA, 2.4);
     }
     return '';
   }
@@ -255,7 +263,33 @@
     };
   }
 
-  const ESPECIES = { gatito, rata, mapache, urraca };
+  function cuervo(p) {
+    const bola = E(100, 132, 56, 52);
+    const ala = P('M52 112 Q12 118 14 160 Q20 176 36 168 Q34 184 50 177 Q66 162 66 140 Z');
+    const cola = P('M128 168 L174 146 L186 162 L182 180 L132 186 Z');
+    const penacho = P('M90 88 Q80 62 96 52 Q98 70 102 84 Q106 58 124 56 Q112 72 112 88 Z');
+    return {
+      detras:
+        cel(cola, p.cuerpo, p.sombra, linea('M136 176 L180 158 M138 182 L182 174', p.marca, 2.6)) +
+        par(cel(ala, p.cuerpo, p.sombra, linea('M22 148 Q38 144 52 128', p.marca, 4.5) + linea('M20 162 Q34 160 46 150', p.marca, 3))) +
+        cel(penacho, p.cuerpo, p.sombra),
+      cuerpo: '',
+      cabeza:
+        cel(bola, p.cuerpo, p.sombra,
+          P('M50 162 Q100 140 150 162 L150 200 L50 200 Z')(`fill="${p.panza}"`) +
+          linea('M58 108 Q70 88 96 84', p.marca, 5) + linea('M142 150 Q150 136 148 122', p.marca, 3.5)) +
+        // pico grande de cuervo, con la línea de la boca
+        plano(P('M82 127 Q100 114 118 127 Q114 140 100 154 Q86 140 82 127 Z'), '#4E4959', 3.2) +
+        linea('M87 131 Q100 127 113 131', '#9C98AC', 2.2) + E(94, 124, 3, 1.8, -15)(`fill="#8D899C"`),
+      delante:
+        par(linea('M84 182 L84 194 M84 194 L76 199 M84 194 L84 201 M84 194 L92 199', OUT, 7) +
+            linea('M84 182 L84 194 M84 194 L76 199 M84 194 L84 201 M84 194 L92 199', '#6E6A80', 3.4)),
+      cara: { L: [76, 114], R: [124, 114], rx: 7, ry: 9, piel: p.cuerpo, esclerotica: true, boca: null },
+      anclas: { oreja: [70, 86, -20], oreja2: [132, 86, 20], top: [104, 70], cuello: 170, anchoCuello: 36, sucio: [[70, 106], [138, 148], [118, 172]] },
+    };
+  }
+
+  const ESPECIES = { gatito, rata, mapache, urraca, cuervo };
 
   /* ---------------- extras de ánimo ---------------- */
   function extras(animo, a) {
@@ -278,6 +312,10 @@
         return a.sucio.map(([x, y], i) => E(x, y, 8 - i, 5.5 - i * .5, 15)(`fill="#8C6B55" opacity=".55"`)).join('') +
           linea('M160 44 q6 -6 0 -12 q-6 -6 0 -12', '#8DB57A', 3.2) + linea('M174 52 q6 -6 0 -12 q-6 -6 0 -12', '#8DB57A', 3.2) +
           `<g transform="translate(34 44)">` + plano(E(-4, -4, 5, 3), '#E7F3FB', 1.6) + plano(E(4, -4, 5, 3), '#E7F3FB', 1.6) + `<circle r="3.2" fill="${OUT}"/></g>`;
+      case 'cansado':
+        return `<g font-family="Gaegu, 'Comic Sans MS', cursive" font-weight="700" fill="#D8CCF2" stroke="${OUT}" stroke-width="2" paint-order="stroke">` +
+          `<text x="156" y="44" font-size="20">z</text></g>` +
+          linea('M34 40 q4 6 0 10', '#A9D4F2', 3);
       case 'dormido':
         return `<g font-family="Gaegu, 'Comic Sans MS', cursive" font-weight="700" fill="#D8CCF2" stroke="${OUT}" stroke-width="2.5" paint-order="stroke">` +
           `<text x="146" y="50" font-size="24">z</text><text x="162" y="34" font-size="34">Z</text></g>`;
@@ -330,7 +368,7 @@
     const tam = o.tam || 200;
     const acc = o.accesorio && o.accesorio !== 'ninguno' ? o.accesorio : '';
     const s = ESPECIES[esp](p);
-    const compacto = esp === 'rata' || esp === 'urraca';
+    const compacto = esp === 'rata' || esp === 'urraca' || esp === 'cuervo';
     let fig = s.detras + s.cuerpo + (acc === 'bufanda' && !compacto ? accesorio('bufanda', s.anclas, s.cara) : '') +
       s.cabeza + cara(s.cara, animo) +
       (s.cara.dientes && ['contento', 'triste', 'sucio'].includes(animo) ? plano(P('M96 157 L104 157 L104 164 Q100 166 96 164 Z'), '#FFFFFF', 2) + linea('M100 157 L100 164', OUT, 1.4) : '') +
@@ -342,7 +380,7 @@
       `<g class="pet__body">${fig}</g>` + extras(animo, s.anclas) + `</svg>`;
   }
 
-export const ANIMOS = ['feliz', 'contento', 'triste', 'enfadado', 'hambriento', 'sucio', 'dormido'];
+export const ANIMOS = ['feliz', 'contento', 'triste', 'enfadado', 'hambriento', 'sucio', 'dormido', 'cansado'];
 export const ACCESORIOS = ['ninguno', 'lazo', 'flor', 'gorro', 'gafas', 'bufanda'];
 export const TINTA = OUT;
 export { mascota, PELAJES };
