@@ -4,7 +4,7 @@
    ============================================================ */
 
 /* ---------- barra de 6 pestañas ---------- */
-.pestanas { grid-template-columns: repeat(6, 1fr); padding-inline: 4px; }
+.pestanas { grid-template-columns: repeat(4, 1fr); padding-inline: 8px; }
 .pestana { font-size: 13.5px; padding-inline: 0; min-width: 0; }
 .pestana span { overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 .pestana svg { width: 24px; height: 24px; }
@@ -128,7 +128,7 @@ input.entrada[type="time"], input.entrada[type="date"] { min-height: 48px; }
 .receta-op .pildora { flex: none; transform: rotate(-2deg) translateX(-2px); }
 
 /* ---------- diario, buscador y recetas (mini MyFitnessPal) ---------- */
-.segmento--ancho { display: grid; grid-template-columns: repeat(4, 1fr); width: 100%; }
+.segmento--ancho { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; width: 100%; }
 .segmento--ancho button { padding: 7px 2px 6px; font-size: 16px; }
 .navegador-fecha--centro { justify-content: center; }
 .derecha { text-align: right; }
@@ -218,3 +218,45 @@ input.entrada[type="time"], input.entrada[type="date"] { min-height: 48px; }
 @media (max-width: 380px) { .nivel span { font-size: 12px; } }
 .aviso-copia { width: 100%; padding: 8px 14px; text-align: left; font-size: 14px; color: var(--tinta); background: color-mix(in srgb, var(--cielo) 45%, var(--papel-2)); border: 2px dashed var(--tinta-suave); border-radius: var(--radio-md); }
 .aviso-copia b { color: var(--frambuesa); font-weight: 600; white-space: nowrap; }
+
+/* ---------- barra de arriba con el menú hamburguesa ---------- */
+.barra-arriba { max-width: 560px; margin: 0 auto; padding: calc(env(safe-area-inset-top, 0px) + 10px) 16px 0; display: flex; align-items: center; gap: 10px; }
+.barra-arriba + .contenido { padding-top: 10px; }
+.barra-arriba__boton { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 50%; border: 2.5px solid var(--tinta); background: var(--papel-2); color: var(--tinta); box-shadow: var(--pegatina); padding: 0; }
+.barra-arriba__donde { font: 700 16px/1 var(--font-titulo); color: var(--tinta-suave); }
+.mas { display: grid; gap: 10px; }
+.mas__op { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 14px; text-align: left; background: var(--papel-2); color: var(--tinta); border: 2.5px solid var(--tinta); border-radius: var(--radio-md); }
+.mas__op > span { display: grid; gap: 2px; }
+.mas__op b { font: 700 21px/1.1 var(--font-titulo); }
+.mas__op[data-activa="true"] { background: var(--rosa-claro); }
+
+/* ---------- comidas: mantener pulsado, partes y opciones de cambio ---------- */
+.comida { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; touch-action: manipulation; }
+.comida .entrada { -webkit-user-select: text; user-select: text; }
+.comida[data-decision="cheat"] .comida__hora .etiqueta { background: var(--rosa); }
+.comida[data-decision="cheat"] { border-style: dashed; }
+.fila--izq { justify-content: flex-start; gap: 8px; }
+.partes { list-style: none; margin: 2px 0; padding: 0; display: grid; gap: 2px; font-size: 15px; }
+.partes li::before { content: "· "; color: var(--frambuesa); font-weight: 700; }
+.cambios { display: grid; gap: 10px; }
+.cambio-op { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; padding: 12px 14px; text-align: left; background: var(--papel-2); color: var(--tinta); border: 2.5px solid var(--tinta); border-radius: var(--radio-md); }
+.cambio-op > span { display: grid; gap: 2px; min-width: 0; }
+.cambio-op b { font: 700 20px/1.1 var(--font-titulo); }
+.cambio-op .pildora { flex: none; }
+.cambio-op--toca { background: var(--menta); box-shadow: var(--pegatina); }
+.receta-op__pistas { display: flex !important; gap: 4px; flex: none; }
+.pila--apretada { gap: 8px; }
+
+/* ---------- mascotas: carácter, energía, bocadillos ---------- */
+.caracter { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0; }
+.dd-texto { font-size: 17px !important; }
+.compi { padding: 8px 14px 8px 4px; }
+.compi__pet { border: 0; background: none; padding: 0; flex: none; }
+.compi__txt { min-width: 0; }
+.rp-card--grande .bocadillo { justify-self: center; text-align: center; margin-bottom: -6px; }
+
+/* Que un desplegable con nombres largos no ensanche la pantalla. */
+.pila { grid-template-columns: minmax(0, 1fr); }
+.campo { min-width: 0; }
+.selector { display: block; min-width: 0; max-width: 100%; }
+.selector select { width: 100%; min-width: 0; max-width: 100%; text-overflow: ellipsis; }

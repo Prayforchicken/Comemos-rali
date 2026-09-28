@@ -44,10 +44,11 @@ const NEC: Record<Necesidad, { nombre: string; bajo: string; color: string; ico:
   hambre: { nombre: "Tripita", bajo: "le apetece comer", color: "var(--melocoton)", ico: "M3 11 H21 Q20 19 12 19 Q4 19 3 11Z" },
   limpieza: { nombre: "Baño", bajo: "quiere burbujas", color: "var(--cielo)", ico: "M3.5 13 a6.5 6.5 0 1 0 13 0 a6.5 6.5 0 1 0 -13 0 M13.7 7 a3.8 3.8 0 1 0 7.6 0 a3.8 3.8 0 1 0 -7.6 0" },
   mimos: { nombre: "Mimos", bajo: "te echa de menos", color: "var(--rosa)", ico: "M12 8 C12 3 3 3 3 9 C3 14 9 17 12 20 C15 17 21 14 21 9 C21 3 12 3 12 8Z" },
-  energia: { nombre: "Siesta", bajo: "tiene sueñito", color: "var(--mantequilla)", ico: "M15 3 A9 9 0 1 0 21 15 A7 7 0 1 1 15 3Z" },
+  energia: { nombre: "Energía", bajo: "sin pilas, como tú", color: "var(--mantequilla)", ico: "M13.5 2.5 L5 13.5 H11 L9.5 21.5 L19 9.5 H12.8 Z" },
 };
 
-export function Necesidades({ n }: { n: TNec }) {
+/** `alTocarEnergia`: la energía no se cuida, se explica (refleja el día de Rali). */
+export function Necesidades({ n, alTocarEnergia }: { n: TNec; alTocarEnergia?: () => void }) {
   return (
     <ul className="rp-nec">
       {(Object.keys(NEC) as Necesidad[]).map((k) => {
@@ -57,15 +58,34 @@ export function Necesidades({ n }: { n: TNec }) {
             <span className="rp-nec__ico">
               <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d={NEC[k].ico} fill={NEC[k].color} stroke="var(--tinta)" strokeWidth="1.8" strokeLinejoin="round" /></svg>
             </span>
-            <span className="rp-nec__txt">{NEC[k].nombre}{llenos <= 1 ? <em>{NEC[k].bajo}</em> : null}</span>
-            <span className="rp-nec__pips" aria-label={`${llenos} de 5`}>
-              {Array.from({ length: 5 }, (_, i) => <i key={i} className={`rp-pip${i < llenos ? " is-on" : ""}`} style={{ ["--pip" as string]: NEC[k].color }} />)}
+            {k === "energia" && alTocarEnergia ? (
+              <button type="button" className="rp-nec__txt rp-nec__boton" onClick={alTocarEnergia}>
+                {NEC[k].nombre} <small className="nota">· tu día ⓘ</small>{llenos <= 1 ? <em>{NEC[k].bajo}</em> : null}
+              </button>
+            ) : <span className="rp-nec__txt">{NEC[k].nombre}{llenos <= 1 ? <em>{NEC[k].bajo}</em> : null}</span>}
+            <span className="rp-nec__pips" role="img" aria-label={`${llenos} de 5 corazones`}>
+              {Array.from({ length: 5 }, (_, i) => <Corazon key={i} lleno={i < llenos} color={NEC[k].color} />)}
             </span>
           </li>
         );
       })}
     </ul>
   );
+}
+
+/** Corazoncito de las necesidades: relleno del color de la necesidad o solo el contorno. */
+export function Corazon({ lleno, color, tam = 17 }: { lleno: boolean; color: string; tam?: number }) {
+  return (
+    <svg className={`rp-corazon${lleno ? " is-on" : ""}`} viewBox="0 0 24 24" width={tam} height={tam} aria-hidden="true">
+      <path d="M12 8 C12 3 3 3 3 9 C3 14 9 17 12 20.5 C15 17 21 14 21 9 C21 3 12 3 12 8Z"
+        fill={lleno ? color : "none"} stroke="var(--tinta)" strokeWidth={lleno ? 1.9 : 1.6} strokeDasharray={lleno ? undefined : "2.6 2.2"} strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+/** Bocadillo de cómic para lo que dicen los animalitos. */
+export function Bocadillo({ children, lado = "abajo" }: { children: ReactNode; lado?: "abajo" | "izquierda" }) {
+  return <p className={`bocadillo bocadillo--${lado}`} aria-live="polite">{children}</p>;
 }
 
 /** Hoja que sube desde abajo (modal). */

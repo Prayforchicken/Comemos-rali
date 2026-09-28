@@ -40,15 +40,18 @@ export function Semana({ datos, fecha, setFecha, irA }: PantallaProps) {
     for (let i = 0; i < 4; i++) {
       for (const s of ["lunch", "dinner"] as const) {
         // Solo cuenta lo que se va a comer del batch: si esa comida es pizza, sobras u otra receta, no se cocina.
-        const c = comidaDecidida(plan, datos.decisiones, shiftIsoDate(inicioBloque, i), s);
-        if (c.decision.tipo !== "plan" || c.template.kind === "flex") continue;
-        const x = g.get(c.template.id) ?? { nombre: c.template.name, gramos: 0, raciones: 0, slots: new Set<string>() };
-        x.gramos += c.grams; x.raciones += 1; x.slots.add(slotLabel(s));
-        g.set(c.template.id, x);
+        const c = comidaDecidida(datos, shiftIsoDate(inicioBloque, i), s);
+        if (c.decision.tipo !== "plan" || c.libre) continue;
+        // Receta y acompañamiento por separado: son dos cosas que cocinar.
+        for (const parte of c.partes) {
+          const x = g.get(parte.template.id) ?? { nombre: parte.template.name, gramos: 0, raciones: 0, slots: new Set<string>() };
+          x.gramos += parte.grams; x.raciones += 1; x.slots.add(slotLabel(s));
+          g.set(parte.template.id, x);
+        }
       }
     }
     return [...g.values()];
-  }, [plan, datos.decisiones, inicioBloque]);
+  }, [datos, inicioBloque]);
   const decididas = (["breakfast", "lunch", "snack", "dinner"] as MealSlot[])
     .map((s) => ({ s, d: datos.decisiones[fecha]?.[s] })).filter((x) => x.d)
     .map((x) => `${slotLabel(x.s)}: ${TEXTO_DECISION[x.d!.tipo].corto.toLowerCase()}`).join(" · ");
@@ -74,8 +77,8 @@ export function Semana({ datos, fecha, setFecha, irA }: PantallaProps) {
 
       <button type="button" className="dia-elegido" onClick={() => irA("hoy")}>
         <span className="nota">{fechaCorta(fecha)} · comida</span>
-        <b>{comidaDecidida(plan, datos.decisiones, fecha, "lunch").template.shortName}</b>
-        <span className="nota">cena · <b>{comidaDecidida(plan, datos.decisiones, fecha, "dinner").template.shortName}</b></span>
+        <b>{comidaDecidida(datos, fecha, "lunch").nombre}</b>
+        <span className="nota">cena · <b>{comidaDecidida(datos, fecha, "dinner").nombre}</b></span>
         {decididas ? <span className="nota">{decididas}</span> : null}
         <span className="enlace">ver el día →</span>
       </button>
@@ -132,7 +135,7 @@ export function Semana({ datos, fecha, setFecha, irA }: PantallaProps) {
             <div key={t} className="escalon"><span>{i}</span><div><b>{t}</b><p className="nota">{c}</p></div></div>
           ))}
         </div>
-        <p className="nota">En cada comida puedes elegir “Algo diferente” y escoger una de estas: sigue contando como comida del plan.</p>
+        <p className="nota">Mantén pulsada una comida en Hoy y cámbiala por una receta de congelador. Cuenta como comida apuntada.</p>
       </Seccion>
 
       <Seccion titulo="Días con más carga" washi="lavanda">

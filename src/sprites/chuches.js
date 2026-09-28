@@ -12,6 +12,7 @@ const T = TINTA;
     queso:     { nombre: 'Quesito',   precio: 10, favorito: 'rata' },
     galleta:   { nombre: 'Galleta',   precio: 10, favorito: 'mapache' },
     brillito:  { nombre: 'Brillito',  precio: 12, favorito: 'urraca' },
+    nuez:      { nombre: 'Nuececita', precio: 12, favorito: 'cuervo' },
   };
   function chuche(tipo = 'caramelo', tam = 56) {
     let i = '';
@@ -48,6 +49,12 @@ const T = TINTA;
         i = s('M14 24 L24 12 L40 12 L50 24 L32 54 Z', '#C6E2F5') + s('M14 24 L50 24 M24 12 L28 24 L32 54 L36 24 L40 12', 'none', 2) +
           `<path d="M20 22 L25 16" stroke="#fff" stroke-width="3" stroke-linecap="round"/>` +
           `<path transform="translate(52 12) scale(.7)" d="M0 -8 Q1.5 -1.5 8 0 Q1.5 1.5 0 8 Q-1.5 1.5 -8 0 Q-1.5 -1.5 0 -8Z" fill="#FBE5A2" stroke="${T}" stroke-width="2"/>`;
+        break;
+      case 'nuez':
+        i = s('M32 8 Q52 10 54 32 Q54 54 32 56 Q10 54 10 32 Q12 10 32 8 Z', '#D9A774') +
+          `<path d="M32 10 Q28 32 32 54" stroke="${T}" stroke-width="2.2" fill="none" stroke-linecap="round"/>` +
+          `<path d="M20 20 Q26 26 20 32 Q14 38 20 44 M44 20 Q38 26 44 32 Q50 38 44 44" stroke="#B07E4E" stroke-width="2.4" fill="none" stroke-linecap="round"/>` +
+          `<circle cx="22" cy="16" r="2.2" fill="#fff" opacity=".8"/>`;
         break;
     }
     return svg(i, tam, 64, CHUCHES[tipo] ? CHUCHES[tipo].nombre : tipo);

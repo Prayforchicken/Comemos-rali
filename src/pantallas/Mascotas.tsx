@@ -2,21 +2,26 @@
    y las chuches para Rali que traen los animalitos bien cuidados. */
 import { useEffect, useRef, useState } from "react";
 import type { PantallaProps } from "../App";
-import { Boton, Campo, Confirmar, Hoja, Huellitas, IconoChuche, Necesidades, Seccion, Sprite, Svg, Washi } from "../componentes/base";
+import { enPlan } from "../acciones";
+import type { ActivityRule } from "../comemos/models";
+import { Boton, Bocadillo, Campo, Confirmar, Hoja, Huellitas, IconoChuche, Necesidades, Pildora, Seccion, Sprite, Svg, Washi } from "../componentes/base";
 import { usePegatina } from "../componentes/Pegatinas";
 import { Personalizar } from "../componentes/Personalizar";
 import {
   adoptar, animoDe, banar, canjear, cuidadoBien, darChuche, despedir, editarMascota, marcarEntregado, mimar, porAdoptar,
   progresoRegalo, regalosGuardados, siguienteLlegada, TEXTO_ANIMO, verRegalos,
 } from "../juego/motor";
+import { fraseDe, PERSONALIDADES, personalidadDe } from "../juego/frases";
 import { HORAS_REGALO, multiplicador } from "../juego/reglas";
 import type { ChucheId, Especie, Regalo } from "../juego/tipos";
 import { CHUCHES, regaloIcono } from "../sprites/chuches.js";
 import { fechaCorta } from "./Hoy";
 import { Tienda } from "./Tienda";
 
-const UNA: Record<Especie, string> = { gatito: "Un gatito", rata: "Una ratita", mapache: "Un mapache", urraca: "Una urraca" };
-const CINTA: Record<Especie, string> = { gatito: "rosa", rata: "lavanda", mapache: "menta", urraca: "cielo" };
+const UNA: Record<Especie, string> = { gatito: "Un gatito", rata: "Una ratita", mapache: "Un mapache", urraca: "Una urraca", cuervo: "Un cuervo" };
+const CINTA: Record<Especie, string> = { gatito: "rosa", rata: "lavanda", mapache: "menta", urraca: "cielo", cuervo: "lavanda" };
+const hhmm = (d: Date) => `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+const ES_BATCH = (a: ActivityRule) => a.id.startsWith("batch-cooking-");
 
 /** Texto para avisar a Adrián de que hay que ir a por algo rico. */
 async function avisarAdrian(r: Regalo) {
@@ -28,11 +33,12 @@ async function avisarAdrian(r: Regalo) {
 }
 
 export function Mascotas(props: PantallaProps) {
-  const { datos, cambiar, ahora, sueno } = props;
+  const { datos, cambiar, ahora, sueno, energia } = props;
   const { juego } = datos;
   const pegatina = usePegatina();
   const m = juego.mascotas.find((x) => x.id === juego.activaId) ?? juego.mascotas[0];
-  const [hoja, setHoja] = useState<null | "chuches" | "aspecto" | "nombre" | { adoptar: Especie }>(null);
+  const [hoja, setHoja] = useState<null | "chuches" | "aspecto" | "nombre" | "energia" | { adoptar: Especie }>(null);
+  const [vuelta, setVuelta] = useState(0);
   const [nombre, setNombre] = useState(m.nombre);
   const [corazones, setCorazones] = useState(0);
   const [canjeando, setCanjeando] = useState<Regalo | null>(null);
@@ -49,7 +55,22 @@ export function Mascotas(props: PantallaProps) {
   useEffect(() => { if (nuevos.current.size) cambiar((d) => ({ ...d, juego: verRegalos(d.juego) })); }, [cambiar]);
   useEffect(() => setNombre(m.nombre), [m.id, m.nombre]);
 
-  const mimo = () => { cambiar((d) => ({ ...d, juego: mimar(d.juego, m.id) })); setCorazones((c) => c + 1); };
+  const mimo = () => { cambiar((d) => ({ ...d, juego: mimar(d.juego, m.id) })); setCorazones((c) => c + 1); setVuelta((v) => v + 1); };
+  const frase = fraseDe(m, { animo, hora: ahora.getHours(), energia: energia.valor, amanecio: energia.amanecio }, vuelta);
+  const caracter = PERSONALIDADES[personalidadDe(m)];
+  const batchHoy = (datos.plan.activityOverrides[energia.dia]?.rali?.extras ?? []).find(ES_BATCH);
+  const apuntarBatch = () => cambiar(enPlan((p) => {
+    const dia = p.activityOverrides[energia.dia] ?? {};
+    const actual = dia.rali ?? { disabledRuleIds: [], extras: [] };
+    const fin = new Date(), ini = new Date(fin.getTime() - 2 * 3_600_000);
+    const regla: ActivityRule = { id: `batch-cooking-${Date.now().toString(36)}`, personId: "rali", label: "Batch cooking", category: "chores", days: [], start: hhmm(ini), end: hhmm(fin), enabled: true, energyMode: "met", met: 2.8, fixedKcal: 0 };
+    return { ...p, activityOverrides: { ...p.activityOverrides, [energia.dia]: { ...dia, rali: { ...actual, extras: [...actual.extras, regla] } } } };
+  }));
+  const quitarBatch = () => cambiar(enPlan((p) => {
+    const dia = p.activityOverrides[energia.dia];
+    if (!dia?.rali) return p;
+    return { ...p, activityOverrides: { ...p.activityOverrides, [energia.dia]: { ...dia, rali: { ...dia.rali, extras: dia.rali.extras.filter((a) => !ES_BATCH(a)) } } } };
+  }));
   const progreso = progresoRegalo(m);
 
   return (
@@ -61,6 +82,7 @@ export function Mascotas(props: PantallaProps) {
 
       <article className="rp-card rp-card--grande">
         <Washi patron="puntos" color={CINTA[m.especie]} />
+        <Bocadillo>{frase}</Bocadillo>
         <button type="button" className="rp-card__pet acariciar" onClick={mimo} aria-label={`Acariciar a ${m.nombre}`}>
           <Sprite m={m} animo={animo} tam={210} />
           {corazones > 0 ? <span key={corazones} className="corazon-sube" aria-hidden="true">♥</span> : null}
@@ -71,11 +93,12 @@ export function Mascotas(props: PantallaProps) {
           </button>
           <span className={`rp-chip rp-chip--${animo}`}>{TEXTO_ANIMO[animo]}</span>
         </header>
-        <Necesidades n={m.necesidades} />
+        <p className="nota caracter"><Pildora color="lavanda">{caracter.nombre}</Pildora> {caracter.texto}</p>
+        <Necesidades n={{ ...m.necesidades, energia: energia.valor }} alTocarEnergia={() => setHoja("energia")} />
         <div className="regalo-progreso">
           <Svg html={regaloIcono(34)} />
           <div>
-            <p className="nota"><b>Próximo regalo de {m.nombre}</b> · {cuidadoBien(m) ? "¡lo estás cuidando genial!" : "sube todo a 3 puntitos o más"}</p>
+            <p className="nota"><b>Próximo regalo de {m.nombre}</b> · {cuidadoBien(m) ? "¡lo estás cuidando genial!" : "sube tripita, baño y mimos a 3 corazones o más"}</p>
             <div className="rp-unlock__bar" style={{ ["--relleno" as string]: "var(--mantequilla)" }}><i style={{ width: `${Math.round(progreso * 100)}%` }} /></div>
           </div>
         </div>
@@ -115,7 +138,7 @@ export function Mascotas(props: PantallaProps) {
             ))}
           </div>
         ) : (
-          <p className="nota">Si mantienes a tus animalitos bien cuidados (todo a 3 puntitos o más) durante unas {HORAS_REGALO} horas, te traen una chuche. Al canjearla, Adrián irá a comprarte algo rico.</p>
+          <p className="nota">Si mantienes a tus animalitos bien cuidados (tripita, baño y mimos a 3 corazones o más) durante unas {HORAS_REGALO} horas, te traen una chuche. Al canjearla, Adrián irá a comprarte algo rico.</p>
         )}
         {canjeados.length ? (
           <ul className="canjeados">
@@ -168,6 +191,8 @@ export function Mascotas(props: PantallaProps) {
           <li>Cada cierto número de huellitas ganadas llega un animalito <b>al azar</b>. Gastar huellitas no lo retrasa.</li>
           <li>Cada animalito sube el bonus: ahora es <b>x{multiplicador(juego.mascotas.length).toLocaleString("es-ES")}</b> (máximo x2).</li>
           <li>Si los cuidas bien mucho tiempo te traen <b>chuches para ti</b>. Al canjearlas, Adrián te compra algo rico.</li>
+          <li>Su <b>energía</b> es la tuya: trabajar, hacer batch cooking o ir al gimnasio les cansa, y dormir les recarga. No hay que cuidarla y nunca quita regalos.</li>
+          <li>Cada animalito tiene su carácter y te dice cosas. Tócalo para que diga otra.</li>
           <li>Nadie se pone malito. Como mucho, se ponen gruñones hasta que les das un mimo.</li>
         </ul>
       </Seccion>
@@ -192,6 +217,26 @@ export function Mascotas(props: PantallaProps) {
           </div>
         ) : <p className="cuerpo">No te quedan chuches.</p>}
         <Boton variante="mantequilla" onClick={() => { setHoja(null); setTimeout(() => document.getElementById("tienda")?.scrollIntoView({ behavior: "smooth" }), 50); }}>Ir a la tienda</Boton>
+      </Hoja>
+
+      <Hoja abierta={hoja === "energia"} cerrar={() => setHoja(null)} titulo="Vuestra energía">
+        <p className="cuerpo">{m.nombre} está como tú: si el día es muy cargado, se cansa, y si no le da tiempo a recuperarse durmiendo, <b>al día siguiente amanece cansadito</b>. No hay que hacer nada: solo descansar.</p>
+        <dl className="macros">
+          <div><dt>Ahora</dt><dd>{energia.valor}<small> %</small></dd></div>
+          <div><dt>Al despertar</dt><dd>{energia.amanecio}<small> %</small></dd></div>
+          <div><dt>Estado</dt><dd className="dd-texto">{energia.durmiendo ? "durmiendo" : energia.valor < 30 ? "sin pilas" : energia.valor < 60 ? "cansadita" : "con energía"}</dd></div>
+        </dl>
+        {energia.gastos.length ? (
+          <ul className="lista-bujo lista-bujo--peque">
+            {energia.gastos.map((g, i) => <li key={i}>{g.etiqueta}: −{g.puntos}</li>)}
+          </ul>
+        ) : <p className="nota">Hoy todavía no has gastado nada.</p>}
+        {batchHoy ? (
+          <p className="nota nota--menta">Batch cooking apuntado hoy ({batchHoy.start}–{batchHoy.end}). <button type="button" className="enlace" onClick={quitarBatch}>quitar</button></p>
+        ) : (
+          <Boton variante="mantequilla" className="ancho" onClick={() => { apuntarBatch(); pegatina({ motivo: "Batch cooking apuntado", extra: `${m.nombre} también está agotadito` }); }}>Hoy he hecho batch cooking</Boton>
+        )}
+        <p className="nota">El trabajo, el gimnasio y lo demás salen de <button type="button" className="enlace" onClick={() => { setHoja(null); props.irA("actividad"); }}>Actividad</button>; las horas de sueño, de Ajustes → Mi perfil.</p>
       </Hoja>
 
       <Hoja abierta={hoja === "nombre"} cerrar={() => setHoja(null)} titulo="¿Cómo se llama?">

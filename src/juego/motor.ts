@@ -5,13 +5,15 @@
 import { CHUCHES } from "../sprites/chuches.js";
 import {
   BAJADA_POR_HORA, BANO, EFECTO_CHUCHE, ESPECIES, EXTRA_FAVORITA, FACTOR_NOCHE, HORAS_REGALO, MIMO,
-  SUBIDA_ENERGIA_DURMIENDO, SUELO_NECESIDAD, UMBRAL_BAJO, UMBRAL_CUIDADO, UMBRAL_FELIZ, multiplicador, umbralLlegada,
+  SUELO_NECESIDAD, UMBRAL_BAJO, UMBRAL_CANSADO, UMBRAL_CUIDADO, UMBRAL_FELIZ, multiplicador, umbralLlegada,
 } from "./reglas";
+import { personalidadAlAzar } from "./frases";
 import type { Accesorio, Animo, ChucheId, Especie, Juego, Logro, Mascota, Necesidad, Necesidades, Regalo, TipoLogro } from "./tipos";
 
 export interface Sueno { dormir: string; despertar: string } // "03:30", "11:00"
 
-const NECESIDADES: Necesidad[] = ["hambre", "limpieza", "mimos", "energia"];
+/** Las que se cuidan (bajan con el tiempo y suben con chuches, baños y mimos). */
+const CUIDADOS = ["hambre", "limpieza", "mimos"] as const;
 const limitar = (v: number) => Math.max(SUELO_NECESIDAD, Math.min(100, v));
 const nuevoId = (p: string) => `${p}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 const minutosDelDia = (d: Date) => d.getHours() * 60 + d.getMinutes();
@@ -41,13 +43,14 @@ export function juegoInicial(): Juego {
 
 /* ---------------- paso del tiempo ---------------- */
 
-/** Recalcula las necesidades de todas las mascotas hasta `ahora`. Máximo 3 días de golpe. */
-export function avanzarTiempo(juego: Juego, ahora: Date, sueno: Sueno): Juego {
+/** Recalcula las necesidades de todas las mascotas hasta `ahora`. Máximo 3 días de golpe.
+    `energia` es la de Rali ahora mismo (energia.ts): los animalitos la reflejan tal cual. */
+export function avanzarTiempo(juego: Juego, ahora: Date, sueno: Sueno, energia: number): Juego {
   const regalos: Regalo[] = [];
   const mascotas = juego.mascotas.map((m) => {
     const desde = new Date(m.actualizado);
     let minutos = Math.min(72 * 60, Math.floor((ahora.getTime() - desde.getTime()) / 60000));
-    if (minutos < 5) return m;
+    if (minutos < 5) return m.necesidades.energia === energia ? m : { ...m, necesidades: { ...m.necesidades, energia } };
     const n: Necesidades = { ...m.necesidades };
     let cuidado = m.cuidadoMin ?? 0;
     const cursor = new Date(desde);
@@ -55,13 +58,10 @@ export function avanzarTiempo(juego: Juego, ahora: Date, sueno: Sueno): Juego {
       const paso = Math.min(30, minutos);
       const horas = paso / 60;
       const durmiendo = estaDurmiendo(cursor, sueno);
-      for (const k of NECESIDADES) {
-        if (k === "energia") n.energia += durmiendo ? SUBIDA_ENERGIA_DURMIENDO * horas : -BAJADA_POR_HORA.energia * horas;
-        else n[k] -= BAJADA_POR_HORA[k] * horas * (durmiendo ? FACTOR_NOCHE : 1);
-        n[k] = limitar(n[k]);
-      }
-      // Buen cuidado: todo bien cubierto → suma tiempo para traer un regalo.
-      if (NECESIDADES.every((k) => n[k] >= UMBRAL_CUIDADO)) cuidado += paso;
+      for (const k of CUIDADOS) n[k] = limitar(n[k] - BAJADA_POR_HORA[k] * horas * (durmiendo ? FACTOR_NOCHE : 1));
+      // Buen cuidado: tripita, baño y mimos bien cubiertos → suma tiempo para traer un regalo.
+      // La energía no cuenta: un día cargado nunca quita regalos.
+      if (CUIDADOS.every((k) => n[k] >= UMBRAL_CUIDADO)) cuidado += paso;
       if (cuidado >= HORAS_REGALO * 60) {
         cuidado -= HORAS_REGALO * 60;
         regalos.push({ id: nuevoId("regalo"), mascotaId: m.id, quien: m.nombre, especie: m.especie, traido: new Date(cursor).toISOString(), visto: false });
@@ -69,6 +69,7 @@ export function avanzarTiempo(juego: Juego, ahora: Date, sueno: Sueno): Juego {
       cursor.setMinutes(cursor.getMinutes() + paso);
       minutos -= paso;
     }
+    n.energia = energia;
     return { ...m, necesidades: n, cuidadoMin: cuidado, actualizado: ahora.toISOString() };
   });
   return { ...juego, mascotas, regalos: regalos.length ? [...juego.regalos, ...regalos] : juego.regalos };
@@ -76,20 +77,21 @@ export function avanzarTiempo(juego: Juego, ahora: Date, sueno: Sueno): Juego {
 
 /** Cuánto le falta a un animalito para traer el siguiente regalo (0–1). */
 export const progresoRegalo = (m: Mascota) => Math.min(1, (m.cuidadoMin ?? 0) / (HORAS_REGALO * 60));
-export const cuidadoBien = (m: Mascota) => NECESIDADES.every((k) => m.necesidades[k] >= UMBRAL_CUIDADO);
+export const cuidadoBien = (m: Mascota) => CUIDADOS.every((k) => m.necesidades[k] >= UMBRAL_CUIDADO);
 
-/** El ánimo sale de la necesidad más baja. Nunca hay un estado irreversible. */
+/** El ánimo sale de la necesidad más baja. Nunca hay un estado irreversible.
+    Si todo lo que se cuida está bien pero Rali va sin energía, el animalito también va "sin pilas". */
 export function animoDe(m: Mascota, ahora: Date, sueno: Sueno): Animo {
   if (m.alegreHasta && new Date(m.alegreHasta) > ahora) return "feliz";
   if (estaDurmiendo(ahora, sueno)) return "dormido";
   const n = m.necesidades;
-  const bajas = NECESIDADES.filter((k) => n[k] < UMBRAL_BAJO);
+  const bajas = CUIDADOS.filter((k) => n[k] < UMBRAL_BAJO);
   if (bajas.length >= 2) return "enfadado";
   if (bajas[0] === "hambre") return "hambriento";
   if (bajas[0] === "limpieza") return "sucio";
   if (bajas[0] === "mimos") return "triste";
-  if (bajas[0] === "energia") return "dormido";
-  return NECESIDADES.every((k) => n[k] >= UMBRAL_FELIZ) ? "feliz" : "contento";
+  if (n.energia < UMBRAL_CANSADO) return "cansado";
+  return CUIDADOS.every((k) => n[k] >= UMBRAL_FELIZ) ? "feliz" : "contento";
 }
 
 export const TEXTO_ANIMO: Record<Animo, string> = {
@@ -100,6 +102,7 @@ export const TEXTO_ANIMO: Record<Animo, string> = {
   hambriento: "Tiene hambre",
   sucio: "Pide un baño",
   dormido: "Durmiendo",
+  cansado: "Sin pilas",
 };
 
 /* ---------------- huellitas ---------------- */
@@ -184,6 +187,7 @@ export function adoptar(juego: Juego, especie: Especie, nombre: string, pelaje: 
     id: nuevoId(especie), especie, nombre: nombre.trim() || "Sin nombre", pelaje, accesorio,
     necesidades: { hambre: 80, limpieza: 90, mimos: 70, energia: 90 },
     actualizado: ahora, adoptada: ahora, alegreHasta: new Date(Date.now() + 30 * 60000).toISOString(),
+    personalidad: personalidadAlAzar(),
   };
   const i = juego.pendientes.indexOf(especie);
   const pendientes = i >= 0 ? [...juego.pendientes.slice(0, i), ...juego.pendientes.slice(i + 1)] : juego.pendientes;

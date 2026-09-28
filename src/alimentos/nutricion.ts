@@ -1,6 +1,6 @@
 /* Cuentas de nutrición: sumar alimentos y convertir una receta propia en receta del plan. */
 import type { MealTemplate } from "../comemos/models";
-import type { Item, Por100, RecetaPropia, Totales } from "./tipos";
+import type { Categoria, Item, Por100, RecetaPropia, Totales } from "./tipos";
 
 const r1 = (v: number) => Math.round(v * 10) / 10;
 
@@ -19,22 +19,32 @@ export const dividir = (t: Totales, n: number): Totales => {
 
 export const vacio: Por100 = { kcal: 0, proteina: 0, carbos: 0, grasa: 0, fibra: 0 };
 
-/** Una receta propia se guarda también como receta del plan: así sale en "Algo diferente" y en "Sobras" con su ración calculada. */
+const KIND: Record<Categoria, MealTemplate["kind"]> = { batch: "batch", acompanamiento: "quick", congelador: "emergency", rapida: "quick", desayuno: "quick" };
+
+/** Una receta propia se guarda también como receta del plan: así sale en el menú, en "Otra receta" y en "Sobras" con su ración calculada.
+    La categoría viaja en las etiquetas ("cat:batch"…) para que el JSON de Comemos siga igual. */
 export function aPlantilla(r: RecetaPropia): MealTemplate {
+  const categoria = r.categoria ?? "rapida";
   const racion = dividir(totales(r.items), r.raciones);
   return {
     id: r.id,
     name: r.nombre,
     shortName: r.nombre.length > 22 ? `${r.nombre.slice(0, 21)}…` : r.nombre,
-    kind: "quick",
+    kind: KIND[categoria],
     baseKcal: Math.max(1, racion.kcal),
     baseProteinG: racion.proteina,
     baseFibreG: racion.fibra,
     baseGrams: Math.max(1, racion.gramos),
     ingredients: r.items.map((i) => `${Math.round(i.gramos / Math.max(1, r.raciones))} g ${i.nombre} (por ración)`),
     instructions: r.pasos.trim() || "Receta propia.",
-    tags: ["propia"],
-    slots: r.momentos.length ? r.momentos : ["lunch", "dinner"],
+    tags: ["propia", `cat:${categoria}`],
+    slots: r.momentos.length ? r.momentos : categoria === "desayuno" ? ["breakfast", "snack"] : ["lunch", "dinner"],
     active: true,
   };
+}
+
+/** Ingredientes de UNA ración de una receta propia, multiplicados por `escala` (la ración calculada para hoy). */
+export function itemsDeRacion(r: RecetaPropia, escala = 1): Item[] {
+  const d = Math.max(1, r.raciones);
+  return r.items.map((i) => ({ ...i, gramos: Math.max(1, Math.round((i.gramos / d) * escala)) }));
 }

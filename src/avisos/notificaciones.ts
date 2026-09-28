@@ -1,7 +1,13 @@
 /* ============================================================
    Notificaciones.
    - En la APK (Capacitor): notificaciones locales programadas de verdad,
-     suenan aunque la app esté cerrada. Se reprograman cada vez que se abre.
+     suenan aunque la app esté cerrada. Se reprograman cada vez que se abre
+     o se vuelve a ella, para los próximos DIAS_PROGRAMADOS días.
+     · Canal propio con importancia alta (si no, Android las esconde).
+     · Alarmas exactas: la APK declara USE_EXACT_ALARM (scripts/preparar-android.sh).
+       Si aun así el móvil no las permite, se programan como "inexactas" (pueden
+       llegar unos minutos tarde) en vez de abrir la pantalla de ajustes en cada
+       reprogramación, que era lo que dejaba la app sin ningún aviso programado.
    - En la PWA (navegador): solo mientras la app está abierta o en segundo plano
      reciente; los navegadores no permiten programar avisos a futuro.
    Los textos son siempre en positivo: recuerdan, no riñen.
@@ -16,7 +22,8 @@ export const esNativo = () => Capacitor.isNativePlatform();
 
 interface Aviso { id: number; cuando: Date; titulo: string; texto: string }
 
-const DIAS_PROGRAMADOS = 4;
+const DIAS_PROGRAMADOS = 7;
+const CANAL = "avisos";
 
 function aFecha(fecha: string, hhmm: string) {
   const [y, mo, d] = fecha.split("-").map(Number);
@@ -25,7 +32,8 @@ function aFecha(fecha: string, hhmm: string) {
 }
 
 /** Calcula los avisos de los próximos días a partir del plan y las mascotas. */
-export function calcularAvisos({ plan, juego, decisiones }: Datos, ahora = new Date()): Aviso[] {
+export function calcularAvisos(datos: Datos, ahora = new Date()): Aviso[] {
+  const { plan, juego } = datos;
   const hoy = todayInTimezone(plan.settings.timezone);
   const mascota = juego.mascotas.find((m) => m.id === juego.activaId) ?? juego.mascotas[0];
   const quien = mascota?.nombre ?? "Tu gatito";
@@ -34,12 +42,13 @@ export function calcularAvisos({ plan, juego, decisiones }: Datos, ahora = new D
     const fecha = shiftIsoDate(hoy, i);
     const base = Number(fecha.replaceAll("-", "").slice(2)) * 10; // id estable por día
     if (juego.avisos.comidas) {
-      diaDecidido(plan, decisiones, fecha).forEach((comida, j) => {
+      diaDecidido(datos, fecha).forEach((comida, j) => {
+        const puntos = comida.bonus ? 10 : 8;
         avisos.push({
           id: base + j,
           cuando: aFecha(fecha, comida.time),
-          titulo: `${slotLabel(comida.slot)}: ${comida.template.shortName}`,
-          texto: comida.libre ? `${quien} te guarda +10 huellitas. ¡Que aproveche!` : `${comida.grams} g · ${quien} te guarda +10 huellitas.`,
+          titulo: `${slotLabel(comida.slot)}: ${comida.nombre}`,
+          texto: comida.libre ? `${quien} te guarda +${puntos} huellitas. ¡Que aproveche!` : `${comida.partes.map((x) => `${x.grams} g`).join(" + ")} · ${quien} te guarda +${puntos} huellitas.`,
         });
       });
     }
@@ -72,6 +81,34 @@ export async function tienePermiso(): Promise<boolean> {
   return "Notification" in window && Notification.permission === "granted";
 }
 
+/** ¿Se pueden programar a la hora exacta? (Android 12+; en el resto siempre sí). */
+export async function avisosExactos(): Promise<boolean> {
+  if (!esNativo()) return true;
+  try { return (await LocalNotifications.checkExactNotificationSetting()).exact_alarm === "granted"; } catch { return true; }
+}
+/** Abre la pantalla de Android "Alarmas y recordatorios" para permitirlos. */
+export async function pedirAvisosExactos(): Promise<boolean> {
+  if (!esNativo()) return true;
+  try { return (await LocalNotifications.changeExactNotificationSetting()).exact_alarm === "granted"; } catch { return false; }
+}
+
+/** Primera vez en la APK: pide el permiso de notificaciones sin esperar a que Rali lo busque en Ajustes. */
+export async function pedirPermisoSiNuncaSePidio(): Promise<void> {
+  if (!esNativo()) return;
+  const p = await LocalNotifications.checkPermissions();
+  if (p.display === "prompt" || p.display === "prompt-with-rationale") await LocalNotifications.requestPermissions();
+}
+
+let canalListo = false;
+async function prepararCanal() {
+  if (canalListo) return;
+  await LocalNotifications.createChannel({
+    id: CANAL, name: "Comidas y mascotas", description: "Recordatorios de comidas, gimnasio y de tus animalitos",
+    importance: 4, visibility: 1, vibration: true, lights: true, lightColor: "#E26F92",
+  });
+  canalListo = true;
+}
+
 let temporizadores: number[] = [];
 
 /** Borra los avisos anteriores y programa los de los próximos días. */
@@ -79,13 +116,18 @@ export async function reprogramar(datos: Datos) {
   const avisos = calcularAvisos(datos);
   if (esNativo()) {
     if (!(await tienePermiso())) return 0;
+    await prepararCanal();
+    // Sin permiso de alarmas exactas, "exacta" haría que Android abra sus ajustes en cada
+    // reprogramación y, si no se vuelve bien, nada queda programado. Mejor inexacta que ninguna.
+    const exacta = await avisosExactos();
     const pendientes = await LocalNotifications.getPending();
     if (pendientes.notifications.length) await LocalNotifications.cancel({ notifications: pendientes.notifications.map((n) => ({ id: n.id })) });
     if (avisos.length) {
       await LocalNotifications.schedule({
         notifications: avisos.map((a) => ({
-          id: a.id, title: a.titulo, body: a.texto,
+          id: a.id, title: a.titulo, body: a.texto, channelId: CANAL,
           schedule: { at: a.cuando, allowWhileIdle: true },
+          isExactNotification: exacta,
           smallIcon: "ic_stat_huellita", iconColor: "#E26F92",
         })),
       });
@@ -114,7 +156,9 @@ export async function avisoDePrueba(nombre: string) {
   if (!(await pedirPermiso())) return false;
   const titulo = `¡Hola desde ${nombre}!`, texto = "Así se verán los recordatorios de comidas.";
   if (esNativo()) {
-    await LocalNotifications.schedule({ notifications: [{ id: 1, title: titulo, body: texto, schedule: { at: new Date(Date.now() + 5000), allowWhileIdle: true }, smallIcon: "ic_stat_huellita", iconColor: "#E26F92" }] });
+    await prepararCanal();
+    const exacta = await avisosExactos();
+    await LocalNotifications.schedule({ notifications: [{ id: 1, title: titulo, body: texto, channelId: CANAL, schedule: { at: new Date(Date.now() + 5000), allowWhileIdle: true }, isExactNotification: exacta, smallIcon: "ic_stat_huellita", iconColor: "#E26F92" }] });
   } else {
     setTimeout(() => void mostrarWeb(titulo, texto), 5000);
   }

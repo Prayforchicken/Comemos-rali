@@ -4,9 +4,12 @@ import { useMemo, useState } from "react";
 import type { PantallaProps } from "../App";
 import { agua, comidaDelPlan, gimnasio, suplemento, type DetalleComida, type Premio } from "../acciones";
 import { activitiesForDay, activityCalories, energyForDay, plannedTotals, servingAdjustment, shiftIsoDate, slotLabel, todayInTimezone } from "../comemos/engine";
-import { decidir, diaDecidido, TEXTO_DECISION, type ComidaDecidida, type TipoDecision } from "../decisiones/decisiones";
-import { ElegirDecision } from "../componentes/ElegirDecision";
-import { Boton, Campo, Hoja, Huellitas, Pastillas, Pildora, Seccion, Sprite, Svg, Washi } from "../componentes/base";
+import { decidir, diaDecidido, TEXTO_DECISION, type ComidaDecidida } from "../decisiones/decisiones";
+import { ElegirDecision, type Modo } from "../componentes/ElegirDecision";
+import { Bocadillo, Boton, Campo, Hoja, Huellitas, Pastillas, Pildora, Seccion, Sprite, Svg, Washi } from "../componentes/base";
+import { usePulsacionLarga } from "../componentes/usePulsacionLarga";
+import { fraseDe } from "../juego/frases";
+import { CATEGORIAS, categoriaDe } from "../menu/menu";
 import { usePegatina } from "../componentes/Pegatinas";
 import { animoDe, deshacer, logroDe, regalosSinVer, TEXTO_ANIMO } from "../juego/motor";
 import { regaloIcono } from "../sprites/chuches.js";
@@ -24,21 +27,20 @@ export function fechaCorta(f: string) {
   return `${d.getDate()} ${MESES[d.getMonth()].slice(0, 3)}`;
 }
 
-const TIPOS: TipoDecision[] = ["plan", "otra", "diferente", "sobras"];
-
-export function Hoy({ datos, cambiar, fecha, setFecha, ahora, sueno, irA }: PantallaProps) {
+export function Hoy({ datos, cambiar, fecha, setFecha, ahora, sueno, energia: energiaRali, irA }: PantallaProps) {
   const { plan, juego } = datos;
   const pegatina = usePegatina();
   const hoy = todayInTimezone(plan.settings.timezone);
   const esFuturo = fecha > hoy;
-  const comidas = useMemo(() => diaDecidido(plan, datos.decisiones, fecha), [plan, datos.decisiones, fecha]);
+  const comidas = useMemo(() => diaDecidido(datos, fecha), [datos, fecha]);
   const energia = useMemo(() => energyForDay(plan, "rali", fecha), [plan, fecha]);
   const totales = plannedTotals(comidas);
   const perfil = plan.profiles.rali;
   const actividades = activitiesForDay(plan, "rali", fecha);
   const gym = actividades.find((a) => a.category === "gym");
   const [marcando, setMarcando] = useState<ComidaDecidida | null>(null);
-  const [eligiendo, setEligiendo] = useState<{ comida: ComidaDecidida; tipo: Exclude<TipoDecision, "plan"> } | null>(null);
+  const [eligiendo, setEligiendo] = useState<{ comida: ComidaDecidida; modo: Modo } | null>(null);
+  const [vuelta, setVuelta] = useState(0);
   const mascota = juego.mascotas.find((m) => m.id === juego.activaId) ?? juego.mascotas[0];
   const mult = multiplicador(juego.mascotas.length);
 
@@ -70,14 +72,19 @@ export function Hoy({ datos, cambiar, fecha, setFecha, ahora, sueno, irA }: Pant
       </header>
 
       {mascota ? (
-        <button type="button" className="compi" onClick={() => irA("mascotas")}>
-          <Sprite m={mascota} animo={animo} tam={112} />
+        <div className="compi">
+          <button type="button" className="compi__pet" onClick={() => setVuelta((v) => v + 1)} aria-label={`${mascota.nombre}: que diga otra cosa`}>
+            <Sprite m={mascota} animo={animo} tam={112} />
+          </button>
           <span className="compi__txt">
-            <b className="subtitulo">{mascota.nombre}</b>
-            <span className={`rp-chip rp-chip--${animo}`}>{TEXTO_ANIMO[animo]}</span>
-            <span className="nota">Lo del plan: <b className="frambuesa">+{Math.round(PUNTOS.comida * mult)}</b> · otra cosa: +{Math.round(PUNTOS.comidaOtra * mult)}{mult > 1 ? ` (x${mult.toLocaleString("es-ES")})` : ""}</span>
+            <Bocadillo lado="izquierda">{fraseDe(mascota, { animo, hora: ahora.getHours(), energia: energiaRali.valor, amanecio: energiaRali.amanecio }, vuelta)}</Bocadillo>
+            <span className="fila fila--envuelve">
+              <button type="button" className="enlace" onClick={() => irA("mascotas")}><b>{mascota.nombre}</b></button>
+              <span className={`rp-chip rp-chip--${animo}`}>{TEXTO_ANIMO[animo]}</span>
+            </span>
+            <span className="nota">Lo que toca: <b className="frambuesa">+{Math.round(PUNTOS.comida * mult)}</b> · otra cosa: +{Math.round(PUNTOS.comidaOtra * mult)}{mult > 1 ? ` (x${mult.toLocaleString("es-ES")})` : ""}</span>
           </span>
-        </button>
+        </div>
       ) : null}
 
       {regalosSinVer(juego).length ? (
@@ -126,63 +133,19 @@ export function Hoy({ datos, cambiar, fecha, setFecha, ahora, sueno, irA }: Pant
         <h2 className="etiqueta"><span className="rp-subrayado">Lo que toca y cuánto</span></h2>
         <Pildora color="rosa">4 tomas</Pildora>
       </div>
-      <p className="nota">Cada comida se decide por separado. “Lo que hay” da <b>+{Math.round(PUNTOS.comida * mult)}</b>; cualquier otra opción da <b>+{Math.round(PUNTOS.comidaOtra * mult)}</b> (sin el bonus de seguir el plan).</p>
+      <p className="nota">Cada comida se decide por separado: <b>mantén pulsada</b> una comida (o toca “Cambiar”) para cambiarla o ajustarla solo hoy. Lo que toca da <b>+{Math.round(PUNTOS.comida * mult)}</b>; otras opciones, <b>+{Math.round(PUNTOS.comidaOtra * mult)}</b>.</p>
       <div className="pila">
-        {comidas.map((c) => {
-          const logro = logroDe(juego, fecha, "comida", c.slot);
-          return (
-            <article key={c.slot} className="comida" data-hecha={Boolean(logro)} data-decision={c.decision.tipo}>
-              <div className="comida__hora"><span className="etiqueta">{c.time}</span></div>
-              <div className="comida__cuerpo">
-                <p className="comida__slot">{slotLabel(c.slot)}{c.template.kind === "batch" ? <em>batch</em> : null}{c.template.kind === "emergency" ? <em>emergencia</em> : null}</p>
-                <div className="decision" role="group" aria-label={`Qué hacer en ${slotLabel(c.slot).toLowerCase()}`}>
-                  {TIPOS.map((t) => (
-                    <button key={t} type="button" className="decision__op" data-activa={c.decision.tipo === t} style={{ ["--op" as string]: `var(--${TEXTO_DECISION[t].color})` }}
-                      onClick={() => t === "plan" ? cambiar((d) => ({ ...d, decisiones: decidir(d.decisiones, fecha, c.slot, { tipo: "plan" }) })) : setEligiendo({ comida: c, tipo: t })}>
-                      {TEXTO_DECISION[t].corto}
-                    </button>
-                  ))}
-                </div>
-                <h3 className="comida__nombre">{c.template.name}</h3>
-                {c.libre && !c.items.length ? (
-                  <p className="comida__racion">Sin apuntar · cuenta como <b className="frambuesa">~{c.kcal}</b> kcal</p>
-                ) : c.libre ? (
-                  <p className="comida__racion"><b>{c.grams} g</b> · {c.kcal} kcal · {c.proteinG} g proteína · {c.fibreG} g fibra</p>
-                ) : (
-                  <p className="comida__racion"><b>{c.grams} g</b> · {c.kcal} kcal · {c.proteinG} g proteína · {c.fibreG} g fibra</p>
-                )}
-                {c.addOn ? <p className="nota">+ {c.addOn}</p> : null}
-                {c.learningNote ? <p className="nota nota--menta">{c.learningNote}</p> : null}
-                {c.scenarioNote ? <p className="nota nota--mantequilla">{c.scenarioNote}</p> : null}
-                {c.libre && c.items.length ? (
-                  <ul className="lista-bujo lista-bujo--peque">{c.items.map((i, k) => <li key={k}>{i.gramos} g {i.nombre} · {Math.round((i.n.kcal * i.gramos) / 100)} kcal</li>)}</ul>
-                ) : c.libre ? (
-                  <button type="button" className="enlace enlace--izq" onClick={() => setEligiendo({ comida: c, tipo: "otra" })}>Apuntar qué y cuánto</button>
-                ) : null}
-                {!c.libre && c.template.ingredients.length ? (
-                  <details className="receta">
-                    <summary>Ingredientes y preparación</summary>
-                    <ul>{c.template.ingredients.map((i) => <li key={i}>{i}</li>)}</ul>
-                    <p>{c.template.instructions}</p>
-                  </details>
-                ) : null}
-                {logro ? (
-                  <div className="hecho">
-                    <span className="hecho__sello">¡Hecho! +{logro.puntos}</span>
-                    <button type="button" className="enlace" onClick={() => cambiar((d) => {
-                      let j = deshacer(d.juego, logro.id);
-                      const dc = logroDe(j, fecha, "dia-completo");
-                      if (dc) j = deshacer(j, dc.id);
-                      return { ...d, juego: j };
-                    })}>desmarcar</button>
-                  </div>
-                ) : !esFuturo ? (
-                  <Boton variante="menta" onClick={() => setMarcando(c)}>¡Me lo he comido!</Boton>
-                ) : null}
-              </div>
-            </article>
-          );
-        })}
+        {comidas.map((c) => (
+          <TarjetaComida key={c.slot} c={c} logro={logroDe(juego, fecha, "comida", c.slot)} esFuturo={esFuturo} mult={mult}
+            alCambiar={(modo) => setEligiendo({ comida: c, modo })}
+            alComer={() => setMarcando(c)}
+            alDesmarcar={(id) => cambiar((d) => {
+              let j = deshacer(d.juego, id);
+              const dc = logroDe(j, fecha, "dia-completo");
+              if (dc) j = deshacer(j, dc.id);
+              return { ...d, juego: j };
+            })} />
+        ))}
       </div>
 
       {/* ---------- gimnasio ---------- */}
@@ -217,22 +180,90 @@ export function Hoy({ datos, cambiar, fecha, setFecha, ahora, sueno, irA }: Pant
 
       <MarcarComida comida={marcando} cerrar={() => setMarcando(null)} alGuardar={(x) => {
         if (!marcando) return;
-        const r = comidaDelPlan(datos, fecha, marcando, { ...x, registrar: !marcando.libre }, marcando.decision.tipo === "plan");
+        // Solo se aprende de las raciones calculadas (no de lo libre ni de lo ajustado a mano).
+        const r = comidaDelPlan(datos, fecha, marcando, { ...x, registrar: !marcando.libre && !marcando.ajustada }, marcando.bonus);
         const aprendido = servingAdjustment(r.datos.plan.feedback, "rali", marcando.slot, marcando.template.id).note;
         cambiar(() => r.datos);
         setMarcando(null);
         celebrar(r.premios, aprendido ?? undefined);
       }} />
 
-      <ElegirDecision eleccion={eligiendo} plan={plan} fecha={fecha}
-        despensa={{ alimentos: datos.alimentos, recetas: datos.recetas, alGuardarAlimento: (a) => cambiar((d) => ({ ...d, alimentos: { ...d.alimentos, [a.id]: a } })) }}
+      <ElegirDecision eleccion={eligiendo} fecha={fecha} mult={mult} irAMenu={() => irA("menu")}
+        despensa={{ ...datos, alGuardarAlimento: (a) => cambiar((d) => ({ ...d, alimentos: { ...d.alimentos, [a.id]: a } })) }}
         cerrar={() => setEligiendo(null)} alElegir={(decision) => {
-        if (!eligiendo) return;
-        const slot = eligiendo.comida.slot;
-        cambiar((d) => ({ ...d, decisiones: decidir(d.decisiones, fecha, slot, decision) }));
-        setEligiendo(null);
-      }} />
+          if (!eligiendo) return;
+          const slot = eligiendo.comida.slot;
+          cambiar((d) => ({ ...d, decisiones: decidir(d.decisiones, fecha, slot, decision) }));
+          setEligiendo(null);
+        }} />
     </div>
+  );
+}
+
+/** Una comida del día. Mantener pulsada abre las opciones para cambiarla. */
+function TarjetaComida({ c, logro, esFuturo, mult, alCambiar, alComer, alDesmarcar }: {
+  c: ComidaDecidida; logro: ReturnType<typeof logroDe>; esFuturo: boolean; mult: number;
+  alCambiar: (m: Modo) => void; alComer: () => void; alDesmarcar: (logroId: string) => void;
+}) {
+  const pulsar = usePulsacionLarga(() => alCambiar("inicio"));
+  const puntos = Math.round((c.bonus ? PUNTOS.comida : PUNTOS.comidaOtra) * mult);
+  const tipo = TEXTO_DECISION[c.decision.tipo];
+  const cat = c.libre ? null : categoriaDe(c.partes[0].template);
+  return (
+    <article className="comida" data-hecha={Boolean(logro)} data-decision={c.decision.tipo} {...pulsar}>
+      <div className="comida__hora"><span className="etiqueta">{c.time}</span></div>
+      <div className="comida__cuerpo">
+        <p className="comida__slot">{slotLabel(c.slot)}{cat === "batch" || cat === "congelador" ? <em>{CATEGORIAS[cat].nombre.toLowerCase()}</em> : null}</p>
+        <div className="fila fila--envuelve fila--izq">
+          <Pildora color={tipo.color}>{tipo.corto}{c.ajustada ? " · ajustada hoy" : ""}</Pildora>
+          <Pildora color={c.bonus ? "menta" : "papel"}>+{puntos}{c.bonus ? "" : " · sin bonus"}</Pildora>
+        </div>
+        <h3 className="comida__nombre">{c.libre ? c.template.name : c.nombre}</h3>
+        {c.partes.length > 1 ? (
+          <ul className="partes">
+            {c.partes.map((x) => <li key={x.rol}><b>{x.grams} g</b> {x.template.shortName.toLowerCase()}{x.rol === "acompanamiento" ? <small className="nota"> · acompañamiento</small> : null}</li>)}
+          </ul>
+        ) : null}
+        {c.libre && !c.items.length && c.decision.tipo !== "cheat" ? (
+          <p className="comida__racion">Sin apuntar · cuenta como <b className="frambuesa">~{c.kcal}</b> kcal</p>
+        ) : c.decision.tipo === "cheat" ? (
+          <p className="comida__racion">Sin pesar · <b>~{c.kcal}</b> kcal aproximadas</p>
+        ) : (
+          <p className="comida__racion">{c.partes.length > 1 ? null : <><b>{c.grams} g</b> · </>}{c.kcal} kcal · {c.proteinG} g proteína · {c.fibreG} g fibra</p>
+        )}
+        {c.addOn ? <p className="nota">+ {c.addOn}</p> : null}
+        {c.learningNote ? <p className="nota nota--menta">{c.learningNote}</p> : null}
+        {c.scenarioNote ? <p className="nota nota--mantequilla">{c.scenarioNote}</p> : null}
+        {c.libre && c.items.length ? (
+          <ul className="lista-bujo lista-bujo--peque">{c.items.map((i, k) => <li key={k}>{i.gramos} g {i.nombre} · {Math.round((i.n.kcal * i.gramos) / 100)} kcal</li>)}</ul>
+        ) : c.libre && c.decision.tipo === "otra" ? (
+          <button type="button" className="enlace enlace--izq" onClick={() => alCambiar("otra")}>Apuntar qué y cuánto</button>
+        ) : null}
+        {!c.libre ? (
+          <details className="receta">
+            <summary>{c.ajustada ? "Lo que comes hoy" : "Ingredientes y preparación"}</summary>
+            {c.partes.map((x) => (
+              <div key={x.rol}>
+                {c.partes.length > 1 ? <p className="cuerpo-fuerte">{x.template.shortName}</p> : null}
+                <ul>{(x.items ? x.items.map((i) => `${i.gramos} g ${i.nombre}`) : x.template.ingredients).map((i) => <li key={i}>{i}</li>)}</ul>
+                {x.template.instructions ? <p>{x.template.instructions}</p> : null}
+              </div>
+            ))}
+          </details>
+        ) : null}
+        {logro ? (
+          <div className="hecho">
+            <span className="hecho__sello">¡Hecho! +{logro.puntos}</span>
+            <button type="button" className="enlace" onClick={() => alDesmarcar(logro.id)}>desmarcar</button>
+          </div>
+        ) : (
+          <div className="fila fila--envuelve fila--izq">
+            {!esFuturo ? <Boton variante="menta" onClick={alComer}>¡Me lo he comido!</Boton> : null}
+            <Boton variante="papel" onClick={() => alCambiar("inicio")}>Cambiar</Boton>
+          </div>
+        )}
+      </div>
+    </article>
   );
 }
 
@@ -244,8 +275,8 @@ type Marcado = Omit<DetalleComida, "registrar">;
 
 function MarcarComida({ comida, cerrar, alGuardar }: { comida: ComidaDecidida | null; cerrar: () => void; alGuardar: (x: Marcado) => void }) {
   return (
-    <Hoja abierta={Boolean(comida)} cerrar={cerrar} titulo={comida ? `${slotLabel(comida.slot)}: ${comida.template.shortName}` : ""}>
-      {comida ? <FormComida key={`${comida.slot}-${comida.template.id}`} gramos={comida.grams} libre={comida.libre} alGuardar={alGuardar} /> : null}
+    <Hoja abierta={Boolean(comida)} cerrar={cerrar} titulo={comida ? `${slotLabel(comida.slot)}: ${comida.libre ? comida.template.shortName : comida.nombre}` : ""}>
+      {comida ? <FormComida key={`${comida.slot}-${comida.template.id}`} gramos={comida.partes[0].grams} libre={comida.libre || comida.ajustada} alGuardar={alGuardar} /> : null}
     </Hoja>
   );
 }
@@ -259,7 +290,7 @@ function FormComida({ gramos, libre, alGuardar }: { gramos: number; libre: boole
   const [detalle, setDetalle] = useState(false);
   return (
     <>
-      <p className="cuerpo">{libre ? "¡Que aproveche! Aquí no se pesa nada: solo cobra tus huellitas." : "Cuenta aunque no te lo termines. Esto sirve para ajustar las raciones poco a poco."}</p>
+      <p className="cuerpo">{libre ? "¡Que aproveche! Aquí no hay que pesar nada: solo cobra tus huellitas." : "Cuenta aunque no te lo termines. Esto sirve para ajustar las raciones poco a poco."}</p>
       {libre ? null : <div className="campo"><span className="etiqueta">¿Cuánto te has comido?</span><Pastillas valor={comido} opciones={CANTIDADES} alCambiar={setComido} /></div>}
       <div className="campo"><span className="etiqueta">¿Y después?</span><Pastillas valor={hambre} opciones={HAMBRE} alCambiar={setHambre} /></div>
       <div className="campo"><span className="etiqueta">¿Qué tal estaba?</span><Pastillas valor={rico} opciones={RICO} alCambiar={setRico} /></div>

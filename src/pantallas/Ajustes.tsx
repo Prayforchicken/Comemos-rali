@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import type { PantallaProps } from "../App";
 import { enPlan } from "../acciones";
-import { avisoDePrueba, esNativo, pedirPermiso, reprogramar, tienePermiso } from "../avisos/notificaciones";
+import { avisoDePrueba, avisosExactos, esNativo, pedirAvisosExactos, pedirPermiso, reprogramar, tienePermiso } from "../avisos/notificaciones";
 import { slotLabel } from "../comemos/engine";
 import type { MealSlot, Profile } from "../comemos/models";
 import { Boton, Campo, Confirmar, Interruptor, Seccion, Selector, Titulo } from "../componentes/base";
@@ -17,7 +17,8 @@ export function Ajustes({ datos, cambiar }: PantallaProps) {
   const pegatina = usePegatina();
   const mascota = juego.mascotas.find((m) => m.id === juego.activaId) ?? juego.mascotas[0];
   const [permiso, setPermiso] = useState<boolean | null>(null);
-  useEffect(() => { void tienePermiso().then(setPermiso); }, []);
+  const [exactos, setExactos] = useState(true);
+  useEffect(() => { void tienePermiso().then(setPermiso); void avisosExactos().then(setExactos); }, []);
   const [json, setJson] = useState("");
   const [reinicio, setReinicio] = useState(false);
   const [recuperar, setRecuperar] = useState<{ datos: Datos; nombre: string } | null>(null);
@@ -41,13 +42,25 @@ export function Ajustes({ datos, cambiar }: PantallaProps) {
             : "En el navegador solo avisa mientras la app está abierta. Para avisos de verdad, usa la APK."}
         </p>
         {permiso === false ? <Boton onClick={async () => { const ok = await pedirPermiso(); setPermiso(ok); if (ok) await reprogramar(datos); }}>Permitir notificaciones</Boton> : null}
+        {esNativo() && permiso && !exactos ? (
+          <div className="nota nota--mantequilla">
+            <p>Ahora los avisos pueden llegar unos minutos tarde. Para que lleguen a la hora justa, activa “Alarmas y recordatorios” para Comemos Rali.</p>
+            <Boton variante="mantequilla" onClick={async () => { const ok = await pedirAvisosExactos(); setExactos(ok); await reprogramar(datos); }}>Permitir avisos a la hora exacta</Boton>
+          </div>
+        ) : null}
         {([["comidas", "Comidas del plan"], ["gimnasio", "Una hora antes del gimnasio"], ["mascotas", `${mascota?.nombre ?? "Tu mascota"} te da las buenas noches (21:45)`]] as const).map(([k, t]) => (
           <div key={k} className="fila casilla-fila">
             <span className="cuerpo-fuerte">{t}</span>
             <Interruptor activo={juego.avisos[k]} etiqueta={t} alCambiar={(v) => cambiar((d) => ({ ...d, juego: { ...d.juego, avisos: { ...d.juego.avisos, [k]: v } } }))} />
           </div>
         ))}
-        <Boton variante="papel" onClick={async () => { const ok = await avisoDePrueba(mascota?.nombre ?? "tu gatito"); setPermiso(ok); pegatina({ motivo: ok ? "Aviso de prueba en 5 segundos" : "Sin permiso para avisar", extra: ok ? undefined : "Actívalo en los ajustes del móvil" }); }}>Probar un aviso</Boton>
+        <Boton variante="papel" onClick={async () => { const ok = await avisoDePrueba(mascota?.nombre ?? "tu gatito"); setPermiso(ok); pegatina({ motivo: ok ? "Aviso de prueba en 5 segundos" : "Sin permiso para avisar", extra: ok ? "Cierra la app para comprobar que llega igual" : "Actívalo en los ajustes del móvil" }); }}>Probar un aviso</Boton>
+        {esNativo() ? (
+          <details className="avanzado">
+            <summary>¿No llegan con la app cerrada?</summary>
+            <p className="nota">Algunos móviles (Xiaomi, Samsung, Huawei, Oppo…) “duermen” las apps para ahorrar batería y se comen los avisos. En Ajustes del móvil → Apps → Comemos Rali → <b>Batería: sin restricciones</b> (o “No optimizar”), y en Xiaomi activa también <b>Inicio automático</b>. Después abre la app una vez para que reprograme la semana.</p>
+          </details>
+        ) : null}
       </Seccion>
 
       <EditorPerfil perfil={plan.profiles.rali} alGuardar={(p) => { cambiar(enPlan((x) => ({ ...x, profiles: { ...x.profiles, rali: p } }))); pegatina({ motivo: "Perfil guardado", extra: "El plan se ha recalculado" }); }} />
@@ -111,7 +124,7 @@ export function Ajustes({ datos, cambiar }: PantallaProps) {
         texto={recuperar ? `“${recuperar.nombre}”: ${resumen(recuperar.datos)}. Sustituye todo lo que hay ahora en este móvil (${resumen(datos)}).` : ""}
         si="Sí, recuperar" alConfirmar={() => { if (recuperar) { cambiar(() => recuperar.datos); pegatina({ motivo: "¡Copia recuperada!", extra: "Todo ha vuelto a su sitio" }); } setRecuperar(null); }} />
       <Confirmar abierta={reinicio} cerrar={() => setReinicio(false)} titulo="¿Empezar de cero?" texto="Se borra todo lo de este móvil: plan, diario, recetas y animalitos. Guarda una copia antes si quieres poder volver." si="Sí, empezar de cero" alConfirmar={() => { cambiar(() => datosIniciales()); setReinicio(false); }} />
-      <p className="nota centro">Comemos · Rali · versión de pruebas 0.5</p>
+      <p className="nota centro">Comemos · Rali · versión de pruebas 0.6</p>
     </div>
   );
 }
