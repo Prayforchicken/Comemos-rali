@@ -30,7 +30,11 @@ jobs:
           distribution: temurin
           java-version: 21
 
-      - uses: android-actions/setup-android@v3
+      # El runner de GitHub ya trae el SDK de Android instalado (variable ANDROID_HOME).
+      # No usamos android-actions/setup-android@v3: esa acción está descontinuada y
+      # falla en los runners actuales; solo hace falta aceptar las licencias.
+      - name: Aceptar licencias del SDK de Android
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null
 
       - name: Instalar dependencias
         run: npm ci
