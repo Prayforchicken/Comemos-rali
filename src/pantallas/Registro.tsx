@@ -11,7 +11,7 @@ import { fechaCorta } from "./Hoy";
 
 const TEXTO_LOGRO: Record<TipoLogro, string> = { comida: "Comida del plan", gimnasio: "Gimnasio", agua: "Agua del día", "dia-completo": "Día completo" };
 
-export function Registro({ datos, cambiar }: PantallaProps) {
+export function Registro({ datos, cambiar, incrustado }: PantallaProps & { incrustado?: boolean }) {
   const { plan, juego } = datos;
   const pegatina = usePegatina();
   const [peso, setPeso] = useState(String(plan.profiles.rali.weightKg));
@@ -46,7 +46,7 @@ export function Registro({ datos, cambiar }: PantallaProps) {
 
   return (
     <div className="pila">
-      <Titulo antes="Mi" marcado="registro" texto="La app aprende de repeticiones; un día raro no se convierte en una regla." />
+      {incrustado ? <p className="nota">La app aprende de repeticiones; un día raro no se convierte en una regla.</p> : <Titulo antes="Mi" marcado="registro" texto="La app aprende de repeticiones; un día raro no se convierte en una regla." />}
 
       <section className="regla-aprendizaje">
         <span className="regla-aprendizaje__num">3</span>

@@ -125,15 +125,22 @@ export function Hoy({ datos, cambiar, fecha, setFecha, ahora, sueno, irA }: Pant
                   ))}
                 </div>
                 <h3 className="comida__nombre">{c.template.name}</h3>
-                {c.libre ? (
-                  <p className="comida__racion">Sin pesar · cuenta como <b className="frambuesa">~{c.kcal}</b> kcal</p>
+                {c.libre && !c.items.length ? (
+                  <p className="comida__racion">Sin apuntar · cuenta como <b className="frambuesa">~{c.kcal}</b> kcal</p>
+                ) : c.libre ? (
+                  <p className="comida__racion"><b>{c.grams} g</b> · {c.kcal} kcal · {c.proteinG} g proteína · {c.fibreG} g fibra</p>
                 ) : (
                   <p className="comida__racion"><b>{c.grams} g</b> · {c.kcal} kcal · {c.proteinG} g proteína · {c.fibreG} g fibra</p>
                 )}
                 {c.addOn ? <p className="nota">+ {c.addOn}</p> : null}
                 {c.learningNote ? <p className="nota nota--menta">{c.learningNote}</p> : null}
                 {c.scenarioNote ? <p className="nota nota--mantequilla">{c.scenarioNote}</p> : null}
-                {c.template.ingredients.length ? (
+                {c.libre && c.items.length ? (
+                  <ul className="lista-bujo lista-bujo--peque">{c.items.map((i, k) => <li key={k}>{i.gramos} g {i.nombre} · {Math.round((i.n.kcal * i.gramos) / 100)} kcal</li>)}</ul>
+                ) : c.libre ? (
+                  <button type="button" className="enlace enlace--izq" onClick={() => setEligiendo({ comida: c, tipo: "otra" })}>Apuntar qué y cuánto</button>
+                ) : null}
+                {!c.libre && c.template.ingredients.length ? (
                   <details className="receta">
                     <summary>Ingredientes y preparación</summary>
                     <ul>{c.template.ingredients.map((i) => <li key={i}>{i}</li>)}</ul>
@@ -198,7 +205,9 @@ export function Hoy({ datos, cambiar, fecha, setFecha, ahora, sueno, irA }: Pant
         celebrar(r.premios, aprendido ?? undefined);
       }} />
 
-      <ElegirDecision eleccion={eligiendo} plan={plan} fecha={fecha} cerrar={() => setEligiendo(null)} alElegir={(decision) => {
+      <ElegirDecision eleccion={eligiendo} plan={plan} fecha={fecha}
+        despensa={{ alimentos: datos.alimentos, recetas: datos.recetas, alGuardarAlimento: (a) => cambiar((d) => ({ ...d, alimentos: { ...d.alimentos, [a.id]: a } })) }}
+        cerrar={() => setEligiendo(null)} alElegir={(decision) => {
         if (!eligiendo) return;
         const slot = eligiendo.comida.slot;
         cambiar((d) => ({ ...d, decisiones: decidir(d.decisiones, fecha, slot, decision) }));

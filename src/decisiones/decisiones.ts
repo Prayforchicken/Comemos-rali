@@ -10,16 +10,20 @@
    ============================================================ */
 import { plannedMeal, roundTo, servingAdjustment } from "../comemos/engine";
 import type { AppState, MealSlot, MealTemplate, PlannedMeal } from "../comemos/models";
+import { totales } from "../alimentos/nutricion";
+import type { Item } from "../alimentos/tipos";
 
 export type TipoDecision = "plan" | "otra" | "diferente" | "sobras";
-export interface Decision { tipo: TipoDecision; recetaId?: string; texto?: string }
+export interface Decision { tipo: TipoDecision; recetaId?: string; texto?: string; /** Lo que se comió de verdad en "otra cosa" (alimentos + gramos). */ items?: Item[] }
 /** fecha (YYYY-MM-DD) → toma → decisión. Si no hay nada, es "plan". */
 export type Decisiones = Record<string, Partial<Record<MealSlot, Decision>>>;
 
 export interface ComidaDecidida extends PlannedMeal {
   decision: Decision;
-  /** true cuando no hay receta que pesar (otra cosa, o sobras escritas a mano). */
+  /** true cuando no hay receta del plan detrás (otra cosa, o sobras escritas a mano). */
   libre: boolean;
+  /** Alimentos apuntados en "otra cosa". Si hay, los números son reales, no estimados. */
+  items: Item[];
   /** Receta que calculaba el plan, para mostrar "en vez de…". */
   delPlan: MealTemplate;
 }
@@ -32,8 +36,6 @@ export const TEXTO_DECISION: Record<TipoDecision, { corto: string; largo: string
   diferente: { corto: "Algo diferente", largo: "Otra receta", color: "lavanda" },
   sobras: { corto: "Sobras", largo: "Sobras", color: "cielo" },
 };
-
-export const IDEAS_OTRA = ["Pizza", "Hamburguesa", "Sushi", "Kebab", "Bocata", "Comer fuera", "Pedir a domicilio"];
 
 /** Plan base sin los escenarios por día de Comemos: aquí las decisiones van por comida. */
 const sinEscenarios = (plan: AppState): AppState => (Object.keys(plan.scenarios).length ? { ...plan, scenarios: {} } : plan);
@@ -67,7 +69,15 @@ function conReceta(plan: AppState, base: PlannedMeal, t: MealTemplate): PlannedM
   };
 }
 
-function libre(base: PlannedMeal, nombre: string, nota: string): PlannedMeal {
+function libre(base: PlannedMeal, nombre: string, nota: string, items: Item[] = []): PlannedMeal {
+  if (items.length) {
+    const t = totales(items);
+    const tpl: MealTemplate = {
+      id: "libre", name: nombre, shortName: nombre, kind: "flex", baseKcal: t.kcal, baseProteinG: t.proteina, baseFibreG: t.fibra, baseGrams: t.gramos,
+      ingredients: items.map((i) => `${i.gramos} g ${i.nombre}`), instructions: "", tags: [], slots: [base.slot], active: true,
+    };
+    return { ...base, template: tpl, scale: 1, grams: t.gramos, kcal: t.kcal, proteinG: Math.round(t.proteina), fibreG: Math.round(t.fibra), addOn: null, addOnKcal: 0, learningNote: null, scenarioNote: nota };
+  }
   const t: MealTemplate = {
     id: "libre", name: nombre, shortName: nombre, kind: "flex", baseKcal: base.targetKcal, baseProteinG: 0, baseFibreG: 0, baseGrams: 0,
     ingredients: [], instructions: "", tags: [], slots: [base.slot], active: true,
@@ -80,10 +90,11 @@ export function comidaDecidida(plan: AppState, decisiones: Decisiones, fecha: st
   const base = plannedMeal(p, "rali", fecha, slot);
   const decision = decisionDe(decisiones, fecha, slot);
   const receta = decision.recetaId ? p.mealTemplates.find((t) => t.id === decision.recetaId) : undefined;
-  const envolver = (m: PlannedMeal, esLibre: boolean): ComidaDecidida => ({ ...m, decision, libre: esLibre, delPlan: base.template });
+  const envolver = (m: PlannedMeal, esLibre: boolean): ComidaDecidida => ({ ...m, decision, libre: esLibre, items: decision.items ?? [], delPlan: base.template });
 
   if (decision.tipo === "otra") {
-    return envolver(libre(base, decision.texto?.trim() || "Otra cosa", "Disfrútala sin contar nada. La siguiente comida vuelve al plan, sin compensar."), true);
+    const nombre = decision.texto?.trim() || decision.items?.[0]?.nombre || "Otra cosa";
+    return envolver(libre(base, nombre, "Disfrútala sin compensar nada: la siguiente comida vuelve al plan.", decision.items), true);
   }
   if (decision.tipo === "diferente" && receta) {
     return envolver({ ...conReceta(p, base, receta), scenarioNote: `En vez de ${base.template.shortName}.` }, false);

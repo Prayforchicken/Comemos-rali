@@ -80,7 +80,7 @@ export function Ajustes({ datos, cambiar }: PantallaProps) {
       </Seccion>
 
       <Confirmar abierta={reinicio} cerrar={() => setReinicio(false)} titulo="¿Empezar de cero?" texto="Se borra todo lo de este móvil: plan, registros y animalitos. Exporta una copia antes si quieres poder volver." si="Sí, empezar de cero" alConfirmar={() => { cambiar(() => datosIniciales()); setReinicio(false); }} />
-      <p className="nota centro">Comemos · Rali · versión de pruebas 0.3</p>
+      <p className="nota centro">Comemos · Rali · versión de pruebas 0.4</p>
     </div>
   );
 }

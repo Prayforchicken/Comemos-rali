@@ -2,34 +2,52 @@
 import { useState } from "react";
 import { plannedMeal, shiftIsoDate, slotLabel } from "../comemos/engine";
 import type { AppState, MealTemplate } from "../comemos/models";
-import { IDEAS_OTRA, recetasPara, type ComidaDecidida, type Decision, type TipoDecision } from "../decisiones/decisiones";
+import { recetasPara, type ComidaDecidida, type Decision, type TipoDecision } from "../decisiones/decisiones";
+import { ATAJOS_OTRA, BASE } from "../alimentos/base";
+import type { Alimento, Item, RecetaPropia } from "../alimentos/tipos";
+import { Buscador, ListaItems } from "./Buscador";
 import { Boton, Campo, Hoja, Pildora } from "./base";
 
 type Eleccion = { comida: ComidaDecidida; tipo: Exclude<TipoDecision, "plan"> };
 
 const TITULO: Record<Eleccion["tipo"], string> = { otra: "¿Qué te apetece?", diferente: "¿Qué otra receta?", sobras: "¿Qué sobras hay?" };
 
-export function ElegirDecision({ eleccion, plan, fecha, cerrar, alElegir }: { eleccion: Eleccion | null; plan: AppState; fecha: string; cerrar: () => void; alElegir: (d: Decision) => void }) {
+interface Despensa { alimentos: Record<string, Alimento>; recetas: Record<string, RecetaPropia>; alGuardarAlimento: (a: Alimento) => void }
+
+export function ElegirDecision({ eleccion, plan, fecha, despensa, cerrar, alElegir }: { eleccion: Eleccion | null; plan: AppState; fecha: string; despensa: Despensa; cerrar: () => void; alElegir: (d: Decision) => void }) {
   return (
     <Hoja abierta={Boolean(eleccion)} cerrar={cerrar} titulo={eleccion ? `${slotLabel(eleccion.comida.slot)} · ${TITULO[eleccion.tipo]}` : ""}>
-      {eleccion ? <Contenido key={`${eleccion.comida.slot}-${eleccion.tipo}`} e={eleccion} plan={plan} fecha={fecha} alElegir={alElegir} /> : null}
+      {eleccion ? <Contenido key={`${eleccion.comida.slot}-${eleccion.tipo}`} e={eleccion} plan={plan} fecha={fecha} despensa={despensa} alElegir={alElegir} /> : null}
     </Hoja>
   );
 }
 
-function Contenido({ e, plan, fecha, alElegir }: { e: Eleccion; plan: AppState; fecha: string; alElegir: (d: Decision) => void }) {
+function Contenido({ e, plan, fecha, despensa, alElegir }: { e: Eleccion; plan: AppState; fecha: string; despensa: Despensa; alElegir: (d: Decision) => void }) {
   const actual = e.comida.decision;
   const [texto, setTexto] = useState(actual.tipo === e.tipo ? actual.texto ?? "" : "");
+  const [items, setItems] = useState<Item[]>(actual.tipo === "otra" ? actual.items ?? [] : []);
 
   if (e.tipo === "otra") {
+    const anadir = (i: Item) => setItems((l) => [...l, i]);
+    const atajos = ATAJOS_OTRA.map((id) => BASE.find((x) => x.id === id)!).filter(Boolean);
     return (
       <>
-        <p className="cuerpo">Pizza, comer fuera, un capricho… Se disfruta sin pesar y la siguiente comida vuelve al plan, sin compensar nada.</p>
+        <p className="cuerpo">Pizza, comer fuera, un capricho… Apunta qué y cuánto (aproximado vale) y se suma a tu día. La siguiente comida vuelve al plan, sin compensar nada.</p>
         <div className="opciones">
-          {IDEAS_OTRA.map((i) => <button key={i} type="button" className="opcion" data-activa={texto === i} onClick={() => setTexto(i)}>{i}</button>)}
+          {atajos.map((a) => (
+            <button key={a.id} type="button" className="opcion" onClick={() => anadir({ alimentoId: a.id, nombre: a.nombre, gramos: a.porcion?.gramos ?? 100, n: a.n })}>
+              + {a.nombre.replace(" con pan", "").replace(" (maki)", "")}
+            </button>
+          ))}
         </div>
-        <Campo etiqueta="O escríbelo"><input className="entrada" value={texto} maxLength={40} placeholder="Ej.: tacos con amigas" onChange={(x) => setTexto(x.target.value)} /></Campo>
-        <div className="hoja__acciones"><Boton variante="melocoton" className="ancho" onClick={() => alElegir({ tipo: "otra", texto: texto.trim() || "Otra cosa" })}>Decidido</Boton></div>
+        <ListaItems items={items} cambiar={setItems} />
+        <Buscador guardados={despensa.alimentos} recetas={despensa.recetas} alAnadir={anadir} alGuardarAlimento={despensa.alGuardarAlimento} />
+        <Campo etiqueta="Nombre para esta comida (opcional)"><input className="entrada" value={texto} maxLength={40} placeholder={items[0]?.nombre ?? "Ej.: cena con amigas"} onChange={(x) => setTexto(x.target.value)} /></Campo>
+        <div className="hoja__acciones">
+          <Boton variante="melocoton" className="ancho" onClick={() => alElegir({ tipo: "otra", texto: texto.trim() || undefined, items: items.filter((i) => i.gramos > 0) })}>
+            {items.length ? "Decidido" : "Decidido, sin apuntar cantidades"}
+          </Boton>
+        </div>
       </>
     );
   }
@@ -46,7 +64,7 @@ function Contenido({ e, plan, fecha, alElegir }: { e: Eleccion; plan: AppState; 
   const Fila = ({ t }: { t: MealTemplate }) => (
     <button type="button" className="receta-op" data-activa={actual.tipo === e.tipo && actual.recetaId === t.id} onClick={() => alElegir({ tipo: e.tipo, recetaId: t.id })}>
       <span><b>{t.shortName}</b><small className="nota">{t.name}</small></span>
-      {recientes.has(t.id) ? <Pildora color="cielo">en la nevera</Pildora> : t.kind === "emergency" ? <Pildora color="mantequilla">rápida</Pildora> : null}
+      {recientes.has(t.id) ? <Pildora color="cielo">en la nevera</Pildora> : t.tags.includes("propia") ? <Pildora color="rosa">tuya</Pildora> : t.kind === "emergency" ? <Pildora color="mantequilla">rápida</Pildora> : null}
     </button>
   );
 

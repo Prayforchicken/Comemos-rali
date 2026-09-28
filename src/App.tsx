@@ -15,7 +15,7 @@ import { Ajustes } from "./pantallas/Ajustes";
 import { Bienvenida } from "./pantallas/Bienvenida";
 import { Hoy } from "./pantallas/Hoy";
 import { Mascotas } from "./pantallas/Mascotas";
-import { Registro } from "./pantallas/Registro";
+import { Diario } from "./pantallas/Diario";
 import { Semana } from "./pantallas/Semana";
 
 export interface PantallaProps {
@@ -28,13 +28,13 @@ export interface PantallaProps {
   irA: (p: Pestana) => void;
 }
 
-export type Pestana = "hoy" | "mascotas" | "semana" | "actividad" | "registro" | "ajustes";
+export type Pestana = "hoy" | "mascotas" | "semana" | "actividad" | "diario" | "ajustes";
 const PESTANAS: { id: Pestana; nombre: string; Icono: () => React.JSX.Element }[] = [
   { id: "hoy", nombre: "Hoy", Icono: IcoHoy },
   { id: "mascotas", nombre: "Mascotas", Icono: IcoMascotas },
   { id: "semana", nombre: "Semana", Icono: IcoSemana },
+  { id: "diario", nombre: "Diario", Icono: IcoRegistro },
   { id: "actividad", nombre: "Actividad", Icono: IcoActividad },
-  { id: "registro", nombre: "Registro", Icono: IcoRegistro },
   { id: "ajustes", nombre: "Ajustes", Icono: IcoAjustes },
 ];
 
@@ -90,7 +90,7 @@ export default function App() {
               {pestana === "mascotas" && <Mascotas {...props} />}
               {pestana === "semana" && <Semana {...props} />}
               {pestana === "actividad" && <Actividad {...props} />}
-              {pestana === "registro" && <Registro {...props} />}
+              {pestana === "diario" && <Diario {...props} />}
               {pestana === "ajustes" && <Ajustes {...props} />}
             </main>
             <nav className="pestanas" aria-label="Secciones">
