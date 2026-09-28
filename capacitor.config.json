@@ -1,0 +1,12 @@
+{
+  "appId": "es.adrian.comemosrali",
+  "appName": "Comemos Rali",
+  "webDir": "dist",
+  "android": { "backgroundColor": "#FFF8F5" },
+  "plugins": {
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_huellita",
+      "iconColor": "#E26F92"
+    }
+  }
+}

@@ -1,0 +1,194 @@
+/* ============================================================
+   Estilos. Tokens copiados del sistema de diseño "Mascotas de Rali".
+   ============================================================ */
+@import "@fontsource/gaegu/latin-400.css";
+@import "@fontsource/gaegu/latin-700.css";
+@import "@fontsource/mali/latin-400.css";
+@import "@fontsource/mali/latin-500.css";
+@import "@fontsource/mali/latin-600.css";
+
+:root {
+  --papel: #FFF8F5;
+  --papel-2: #FFFFFF;
+  --cuadricula: #F1DDE3;
+  --cuadricula-fuerte: #E3C6CF;
+  --tinta: #5E4B63;
+  --tinta-suave: #76617C;
+  --tinta-boton: #4A3950;
+  --rosa: #F7B3C4;
+  --rosa-claro: #FCE1E8;
+  --frambuesa: #A5537A;
+  --menta: #BFE6D6;
+  --lavanda: #D8CCF2;
+  --mantequilla: #FBE5A2;
+  --cielo: #C6E2F5;
+  --melocoton: #FDD3B8;
+  --esp-1: 4px;
+  --esp-2: 8px;
+  --esp-3: 12px;
+  --esp-4: 20px;
+  --esp-5: 32px;
+  --radio-sm: 10px;
+  --radio-md: 18px;
+  --radio-lg: 28px;
+  --radio-pill: 999px;
+  --pegatina: 3px 4px 0 #EAD0D8;
+  --font-titulo: Gaegu, "Comic Sans MS", cursive;
+  --font-cuerpo: Mali, "Trebuchet MS", system-ui, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --papel: #2A2130;
+    --papel-2: #352A3B;
+    --cuadricula: #44364B;
+    --cuadricula-fuerte: #5A4962;
+    --tinta: #F7EAF1;
+    --tinta-suave: #CDB9D3;
+    --tinta-boton: #3A2B40;
+    --rosa: #F2A7BC;
+    --rosa-claro: #6A4B5E;
+    --frambuesa: #F5A8C4;
+    --menta: #8CCBB2;
+    --lavanda: #B8A6E6;
+    --mantequilla: #EDD07A;
+    --cielo: #9CC8E8;
+    --melocoton: #F2B48F;
+    --pegatina: 3px 4px 0 #1C1520;
+    color-scheme: dark;
+  }
+}
+
+/* ---------- piezas del sistema de diseño ---------- */
+/* ---------- papel de bullet journal ---------- */
+.rp-papel {
+  background-color: var(--papel);
+  background-image: radial-gradient(circle, var(--cuadricula) 1.3px, transparent 1.6px);
+  background-size: 20px 20px;
+  color: var(--tinta);
+  font-family: var(--font-cuerpo);
+}
+.rp-subrayado {
+  background: linear-gradient(transparent 58%, var(--mantequilla) 58%, var(--mantequilla) 90%, transparent 90%);
+  padding-inline: 4px;
+}
+
+/* ---------- animaciones de mascota ---------- */
+.pet { overflow: visible; display: block; }
+.pet--feliz .pet__body { animation: rp-bote 1.4s ease-in-out infinite; transform-origin: 100px 196px; }
+.pet--contento .pet__body { animation: rp-respira 3.2s ease-in-out infinite; transform-origin: 100px 196px; }
+.pet--dormido .pet__body { animation: rp-respira 4.6s ease-in-out infinite; transform-origin: 100px 196px; }
+.pet--enfadado .pet__body { animation: rp-pataleta 2.4s ease-in-out infinite; transform-origin: 100px 196px; }
+@keyframes rp-bote { 0%,100% { transform: translateY(0) } 45% { transform: translateY(-7px) scale(1.02,.98) } }
+@keyframes rp-respira { 0%,100% { transform: scale(1,1) } 50% { transform: scale(1.015,.985) } }
+@keyframes rp-pataleta { 0%,80%,100% { transform: rotate(0) } 84% { transform: rotate(-3deg) } 88% { transform: rotate(3deg) } 92% { transform: rotate(-2deg) } }
+@media (prefers-reduced-motion: reduce) { .pet .pet__body { animation: none !important; } }
+
+/* ---------- washi tape ---------- */
+.rp-washi {
+  display: inline-block; width: fit-content; min-width: 88px; height: 22px; padding-inline: 10px;
+  font: 700 16px/22px var(--font-titulo); color: var(--tinta-boton);
+  background-color: var(--washi);
+  opacity: .92; transform: rotate(-3deg);
+  clip-path: polygon(2% 0, 98% 4%, 100% 50%, 97% 100%, 3% 96%, 0 50%);
+}
+.rp-washi--rayas { background-image: repeating-linear-gradient(135deg, rgba(255,255,255,.55) 0 5px, transparent 5px 11px); }
+.rp-washi--puntos { background-image: radial-gradient(circle, rgba(255,255,255,.75) 2px, transparent 2.5px); background-size: 10px 10px; }
+.rp-washi--cuadros { background-image: linear-gradient(90deg, rgba(255,255,255,.45) 50%, transparent 50%), linear-gradient(rgba(255,255,255,.45) 50%, transparent 50%); background-size: 12px 12px; }
+
+/* ---------- huellitas (moneda) ---------- */
+.rp-huellitas { display: inline-flex; align-items: center; gap: 4px; font-family: var(--font-titulo); color: var(--tinta); vertical-align: middle; }
+.rp-huellitas b { font-size: 22px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.rp-huellitas small { font: 400 13px/1 var(--font-cuerpo); color: var(--tinta-suave); }
+
+/* ---------- necesidades ---------- */
+.rp-nec { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.rp-nec li { display: grid; grid-template-columns: 24px 1fr auto; align-items: center; gap: 8px; font-size: 14px; }
+.rp-nec__ico { display: flex; }
+.rp-nec__txt { display: flex; flex-direction: column; line-height: 1.15; }
+.rp-nec__txt em { font-style: normal; font-size: 12px; color: var(--frambuesa); }
+.rp-nec__pips { display: flex; gap: 4px; }
+.rp-pip { width: 14px; height: 14px; border-radius: 50%; border: 2px dashed var(--tinta-suave); opacity: .7; }
+.rp-pip.is-on { background: var(--pip); border: 2px solid var(--tinta); opacity: 1; }
+
+/* ---------- tarjeta ---------- */
+.rp-card {
+  position: relative; background: var(--papel-2); border: 2.5px solid var(--tinta);
+  border-radius: var(--radio-lg); padding: 28px 18px 18px; box-shadow: var(--pegatina);
+  display: grid; gap: 12px; max-width: 280px;
+}
+.rp-card > .rp-washi { position: absolute; top: -11px; left: 50%; translate: -50% 0; }
+.rp-card__pet { display: flex; justify-content: center; }
+.rp-card__head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.rp-card__head h3 { margin: 0; }
+
+/* ---------- chip de ánimo ---------- */
+.rp-chip { font: 700 16px/1 var(--font-titulo); padding: 5px 10px 4px; border-radius: var(--radio-pill); border: 2px solid var(--tinta); color: var(--tinta-boton); background: var(--menta); white-space: nowrap; }
+.rp-chip--feliz { background: var(--mantequilla); }
+.rp-chip--contento { background: var(--menta); }
+.rp-chip--triste { background: var(--cielo); }
+.rp-chip--enfadado { background: var(--melocoton); }
+.rp-chip--hambriento { background: var(--melocoton); }
+.rp-chip--sucio { background: var(--lavanda); }
+.rp-chip--dormido { background: var(--lavanda); }
+
+/* ---------- botón ---------- */
+.rp-btn {
+  display: inline-flex; align-items: center; gap: 8px; cursor: pointer;
+  font: 700 20px/1 var(--font-titulo); color: var(--tinta-boton);
+  padding: 10px 18px 9px; border: 2.5px solid var(--tinta); border-radius: var(--radio-pill);
+  background: var(--rosa); box-shadow: 0 4px 0 var(--tinta);
+  transition: transform .08s, box-shadow .08s;
+}
+.rp-btn svg { flex: none; }
+.rp-btn:hover { transform: translateY(-1px); box-shadow: 0 5px 0 var(--tinta); }
+.rp-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--tinta); }
+.rp-btn:focus-visible { outline: 3px dashed var(--frambuesa); outline-offset: 4px; }
+.rp-btn--menta { background: var(--menta); }
+.rp-btn--mantequilla { background: var(--mantequilla); }
+.rp-btn--papel { background: var(--papel-2); color: var(--tinta); }
+
+/* ---------- bonus ---------- */
+.rp-bonus {
+  position: relative; display: inline-flex; align-items: center; gap: 14px; width: fit-content;
+  background: var(--papel-2); border: 2.5px solid var(--tinta); border-radius: var(--radio-md);
+  padding: 16px 20px 14px; box-shadow: var(--pegatina); transform: rotate(-1.5deg);
+}
+.rp-bonus > .rp-washi { position: absolute; top: -10px; left: -14px; min-width: 60px; transform: rotate(-24deg); }
+.rp-bonus__num { display: inline-flex; align-items: center; gap: 4px; }
+.rp-bonus__num b { font: 700 40px/1 var(--font-titulo); color: var(--frambuesa); }
+.rp-bonus__txt { display: flex; flex-direction: column; gap: 2px; }
+.rp-bonus__txt strong { font: 700 20px/1.1 var(--font-titulo); }
+.rp-bonus__txt small { font-size: 13px; color: var(--tinta-suave); }
+
+/* ---------- tracker ---------- */
+.rp-tr { overflow-x: auto; }
+.rp-tr table { border-collapse: separate; border-spacing: 4px; font-family: var(--font-titulo); }
+.rp-tr th { font-weight: 700; font-size: 18px; color: var(--tinta); }
+.rp-tr thead th { width: 32px; }
+.rp-tr thead th.is-hoy { background: var(--rosa); color: var(--tinta-boton); border-radius: var(--radio-pill); }
+.rp-tr tbody th { text-align: left; padding-right: 10px; white-space: nowrap; }
+.rp-tr tbody th small { font: 500 12px/1 var(--font-cuerpo); color: var(--frambuesa); margin-left: 6px; }
+.rp-tr td { width: 32px; height: 32px; text-align: center; vertical-align: middle; border-radius: 10px; }
+.rp-tr td.is-hoy { outline: 2px dashed var(--rosa); outline-offset: -2px; }
+.rp-tr__hecho { display: inline-flex; transform: rotate(-8deg); }
+.rp-tr__pend { font-size: 26px; line-height: 1; color: var(--tinta); }
+.rp-tr__libre { display: inline-block; width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--cuadricula-fuerte); }
+
+/* ---------- desbloqueo ---------- */
+.rp-unlock { display: flex; align-items: center; gap: 16px; background: var(--papel-2); border: 2.5px dashed var(--tinta-suave); border-radius: var(--radio-lg); padding: 14px 18px; max-width: 420px; }
+.rp-unlock__sil { position: relative; flex: none; }
+.rp-unlock__sil svg { filter: brightness(0) invert(.55) sepia(.4) hue-rotate(250deg); opacity: .35; }
+.rp-unlock__sil svg .pet__body { animation: none; }
+.rp-unlock__sil .interrogante-viejo { position: absolute; inset: 0; display: grid; place-items: center; font: 700 44px/1 var(--font-titulo); color: var(--tinta); }
+.rp-unlock__txt { display: grid; gap: 8px; flex: 1; min-width: 0; }
+.rp-unlock__txt p { margin: 0; }
+.rp-unlock__bar { height: 16px; border: 2.5px solid var(--tinta); border-radius: var(--radio-pill); background: var(--papel); overflow: hidden; }
+.rp-unlock__bar i { display: block; height: 100%; background: repeating-linear-gradient(135deg, var(--rosa) 0 8px, var(--rosa-claro) 8px 16px); border-right: 2.5px solid var(--tinta); }
+
+/* ---------- chuches en tienda ---------- */
+.rp-tienda { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 12px; }
+.rp-tienda__item { display: grid; justify-items: center; gap: 4px; background: var(--papel-2); border: 2px solid var(--tinta); border-radius: var(--radio-md); padding: 12px 8px 10px; position: relative; }
+.rp-tienda__item b { font: 700 18px/1 var(--font-titulo); }
+.rp-tienda__fav { position: absolute; top: -9px; right: -6px; font: 700 13px/1 var(--font-titulo); background: var(--rosa); color: var(--tinta-boton); border: 2px solid var(--tinta); border-radius: var(--radio-pill); padding: 3px 7px 2px; transform: rotate(6deg); white-space: nowrap; }
+
