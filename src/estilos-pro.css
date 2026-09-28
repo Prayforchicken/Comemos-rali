@@ -168,3 +168,53 @@ input.entrada[type="time"], input.entrada[type="date"] { min-height: 48px; }
 .receta-propia { display: grid; gap: 10px; padding: 14px 16px 10px; background: var(--papel-2); border: 2.5px solid var(--tinta); border-radius: var(--radio-md); box-shadow: var(--pegatina); }
 .receta-propia .subtitulo { font-size: 23px; }
 @media (max-width: 380px) { .macros--5 dd { font-size: 16px; } }
+
+/* ---------- mascotas: nombre, regalos, llegadas ---------- */
+.nombre-editable { display: inline-flex; align-items: center; gap: 6px; padding: 0 4px; border: 0; background: none; border-bottom: 2px dashed var(--cuadricula-fuerte); }
+.nombre-editable .lapiz { font-size: 18px; color: var(--frambuesa); }
+.fila--centro { justify-content: center; gap: 18px; }
+.regalo-progreso { display: flex; align-items: center; gap: 10px; padding: 8px 10px; background: var(--papel); border-radius: var(--radio-sm); }
+.regalo-progreso > div { flex: 1; display: grid; gap: 4px; }
+.regalo-progreso p { margin: 0; }
+.regalo-progreso .rp-unlock__bar { height: 12px; }
+.regalos { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
+.regalo { position: relative; display: grid; justify-items: center; gap: 6px; padding: 16px 8px 12px; background: var(--papel); border: 2px solid var(--tinta); border-radius: var(--radio-md); }
+.regalo[data-nuevo="true"] { background: color-mix(in srgb, var(--mantequilla) 40%, var(--papel-2)); box-shadow: var(--pegatina); }
+.regalo > .rp-washi { position: absolute; top: -10px; left: 50%; translate: -50% 0; min-width: 70px; }
+.canjeados { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.canjeados li { display: grid; gap: 2px; padding: 6px 0; border-bottom: 2px dotted var(--cuadricula-fuerte); }
+.casilla--peque { padding: 4px 6px; background: none; }
+.misterio { flex: none; width: 76px; height: 76px; display: grid; place-items: center; font: 700 46px/1 var(--font-titulo); color: var(--tinta-suave); border: 2.5px dashed var(--tinta-suave); border-radius: 50%; background: var(--papel); transform: rotate(-6deg); }
+.regalo-aviso { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 14px; text-align: left; background: color-mix(in srgb, var(--mantequilla) 45%, var(--papel-2)); border: 2.5px solid var(--tinta); border-radius: var(--radio-lg); box-shadow: var(--pegatina); animation: rp-pega .4s cubic-bezier(.2, 1.4, .5, 1); }
+.regalo-aviso > span { display: grid; gap: 2px; }
+
+/* ---------- diario personal ---------- */
+.diario-form { display: grid; gap: 14px; padding: 16px; background: var(--papel-2); border: 2.5px solid var(--tinta); border-radius: var(--radio-lg); box-shadow: var(--pegatina); }
+.diario-form__cab { display: flex; align-items: center; gap: 10px; }
+.niveles { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.nivel { display: grid; justify-items: center; gap: 4px; padding: 8px 2px 6px; border: 2px solid var(--tinta); border-radius: var(--radio-sm); background: var(--papel); font: 700 14px/1 var(--font-titulo); }
+.nivel .corazones { gap: 0; }
+.nivel[data-activa="true"] { background: var(--rosa); color: var(--tinta-boton); transform: translateY(-2px); box-shadow: 0 3px 0 var(--tinta); }
+.corazones { display: inline-flex; gap: 2px; }
+.opcion--emocion[data-activa="true"] { background: var(--op); }
+.entrada-diario { display: grid; gap: 8px; padding: 12px 14px 8px; background: var(--papel); border-radius: var(--radio-md); }
+.entrada-diario__texto { white-space: pre-line; }
+.semana-animo { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.semana-animo__dia { display: grid; justify-items: center; gap: 3px; padding: 6px 0; border: 2px solid transparent; border-radius: var(--radio-sm); background: none; }
+.semana-animo__dia[data-activo="true"] { border-color: var(--tinta); background: var(--papel); }
+.semana-animo__dia i { width: 26px; height: 26px; border-radius: 50%; border: 2px dashed var(--cuadricula-fuerte); }
+.semana-animo__dia i[data-nivel="1"] { background: var(--cielo); border: 2px solid var(--tinta); }
+.semana-animo__dia i[data-nivel="2"] { background: var(--lavanda); border: 2px solid var(--tinta); }
+.semana-animo__dia i[data-nivel="3"] { background: var(--menta); border: 2px solid var(--tinta); }
+.semana-animo__dia i[data-nivel="4"] { background: var(--rosa); border: 2px solid var(--tinta); }
+.semana-animo__dia i[data-nivel="5"] { background: var(--mantequilla); border: 2px solid var(--tinta); }
+.semana-animo__dia small { font-size: 11px; color: var(--tinta-suave); min-height: 13px; }
+
+/* ---------- copias ---------- */
+.subir-archivo { position: relative; justify-content: center; }
+.subir-archivo input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.avanzado summary { cursor: pointer; font: 700 16px/1.4 var(--font-titulo); color: var(--tinta-suave); }
+.avanzado[open] { display: grid; gap: 10px; }
+@media (max-width: 380px) { .nivel span { font-size: 12px; } }
+.aviso-copia { width: 100%; padding: 8px 14px; text-align: left; font-size: 14px; color: var(--tinta); background: color-mix(in srgb, var(--cielo) 45%, var(--papel-2)); border: 2px dashed var(--tinta-suave); border-radius: var(--radio-md); }
+.aviso-copia b { color: var(--frambuesa); font-weight: 600; white-space: nowrap; }

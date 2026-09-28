@@ -4,10 +4,10 @@
    ============================================================ */
 import { CHUCHES } from "../sprites/chuches.js";
 import {
-  BAJADA_POR_HORA, BANO, DESBLOQUEOS, EFECTO_CHUCHE, EXTRA_FAVORITA, FACTOR_NOCHE, MIMO,
-  SUBIDA_ENERGIA_DURMIENDO, SUELO_NECESIDAD, UMBRAL_BAJO, UMBRAL_FELIZ, multiplicador,
+  BAJADA_POR_HORA, BANO, EFECTO_CHUCHE, ESPECIES, EXTRA_FAVORITA, FACTOR_NOCHE, HORAS_REGALO, MIMO,
+  SUBIDA_ENERGIA_DURMIENDO, SUELO_NECESIDAD, UMBRAL_BAJO, UMBRAL_CUIDADO, UMBRAL_FELIZ, multiplicador, umbralLlegada,
 } from "./reglas";
-import type { Accesorio, Animo, ChucheId, Especie, Juego, Logro, Mascota, Necesidad, Necesidades, TipoLogro } from "./tipos";
+import type { Accesorio, Animo, ChucheId, Especie, Juego, Logro, Mascota, Necesidad, Necesidades, Regalo, TipoLogro } from "./tipos";
 
 export interface Sueno { dormir: string; despertar: string } // "03:30", "11:00"
 
@@ -32,6 +32,9 @@ export function juegoInicial(): Juego {
     inventario: { caramelo: 1, pescadito: 1 },
     logros: [],
     desbloqueadas: ["gatito"],
+    pendientes: [],
+    llegadas: 0,
+    regalos: [],
     avisos: { comidas: true, gimnasio: true, mascotas: true },
   };
 }
@@ -40,11 +43,13 @@ export function juegoInicial(): Juego {
 
 /** Recalcula las necesidades de todas las mascotas hasta `ahora`. Máximo 3 días de golpe. */
 export function avanzarTiempo(juego: Juego, ahora: Date, sueno: Sueno): Juego {
+  const regalos: Regalo[] = [];
   const mascotas = juego.mascotas.map((m) => {
     const desde = new Date(m.actualizado);
     let minutos = Math.min(72 * 60, Math.floor((ahora.getTime() - desde.getTime()) / 60000));
     if (minutos < 5) return m;
     const n: Necesidades = { ...m.necesidades };
+    let cuidado = m.cuidadoMin ?? 0;
     const cursor = new Date(desde);
     while (minutos > 0) {
       const paso = Math.min(30, minutos);
@@ -55,13 +60,23 @@ export function avanzarTiempo(juego: Juego, ahora: Date, sueno: Sueno): Juego {
         else n[k] -= BAJADA_POR_HORA[k] * horas * (durmiendo ? FACTOR_NOCHE : 1);
         n[k] = limitar(n[k]);
       }
+      // Buen cuidado: todo bien cubierto → suma tiempo para traer un regalo.
+      if (NECESIDADES.every((k) => n[k] >= UMBRAL_CUIDADO)) cuidado += paso;
+      if (cuidado >= HORAS_REGALO * 60) {
+        cuidado -= HORAS_REGALO * 60;
+        regalos.push({ id: nuevoId("regalo"), mascotaId: m.id, quien: m.nombre, especie: m.especie, traido: new Date(cursor).toISOString(), visto: false });
+      }
       cursor.setMinutes(cursor.getMinutes() + paso);
       minutos -= paso;
     }
-    return { ...m, necesidades: n, actualizado: ahora.toISOString() };
+    return { ...m, necesidades: n, cuidadoMin: cuidado, actualizado: ahora.toISOString() };
   });
-  return { ...juego, mascotas };
+  return { ...juego, mascotas, regalos: regalos.length ? [...juego.regalos, ...regalos] : juego.regalos };
 }
+
+/** Cuánto le falta a un animalito para traer el siguiente regalo (0–1). */
+export const progresoRegalo = (m: Mascota) => Math.min(1, (m.cuidadoMin ?? 0) / (HORAS_REGALO * 60));
+export const cuidadoBien = (m: Mascota) => NECESIDADES.every((k) => m.necesidades[k] >= UMBRAL_CUIDADO);
 
 /** El ánimo sale de la necesidad más baja. Nunca hay un estado irreversible. */
 export function animoDe(m: Mascota, ahora: Date, sueno: Sueno): Animo {
@@ -102,7 +117,7 @@ export function ganar(juego: Juego, fecha: string, tipo: TipoLogro, base: number
   const puntos = Math.round(base * mult);
   const logro: Logro = { id: nuevoId("logro"), fecha, creado: new Date().toISOString(), tipo, slot, base, multiplicador: mult, puntos };
   const ganadasTotal = juego.ganadasTotal + puntos;
-  const nuevas = DESBLOQUEOS.filter((d) => d.total <= ganadasTotal && !juego.desbloqueadas.includes(d.especie)).map((d) => d.especie);
+  const llegadas = nuevasLlegadas(juego, ganadasTotal);
   // Las mascotas se alegran un ratito cada vez que Rali consigue algo.
   const alegreHasta = new Date(Date.now() + 20 * 60000).toISOString();
   return {
@@ -111,12 +126,32 @@ export function ganar(juego: Juego, fecha: string, tipo: TipoLogro, base: number
       huellitas: juego.huellitas + puntos,
       ganadasTotal,
       logros: [logro, ...juego.logros].slice(0, 2000),
-      desbloqueadas: [...juego.desbloqueadas, ...nuevas],
+      pendientes: [...juego.pendientes, ...llegadas.especies],
+      llegadas: llegadas.total,
       mascotas: juego.mascotas.map((m) => ({ ...m, alegreHasta, necesidades: { ...m.necesidades, mimos: limitar(m.necesidades.mimos + 10) } })),
     },
     logro,
-    nuevas,
+    nuevas: llegadas.especies,
   };
+}
+
+/** Al azar, con preferencia por especies que aún no viven en casa ni esperan en la puerta. */
+function especieAlAzar(yaEstan: Especie[]): Especie {
+  const nuevas = ESPECIES.filter((e) => !yaEstan.includes(e));
+  const bolsa = nuevas.length ? nuevas : ESPECIES;
+  return bolsa[Math.floor(Math.random() * bolsa.length)];
+}
+
+function nuevasLlegadas(juego: Juego, ganadasTotal: number) {
+  let total = juego.llegadas;
+  const especies: Especie[] = [];
+  const yaEstan = [...juego.mascotas.map((m) => m.especie), ...juego.pendientes];
+  while (ganadasTotal >= umbralLlegada(total)) {
+    const e = especieAlAzar([...yaEstan, ...especies]);
+    especies.push(e);
+    total++;
+  }
+  return { total, especies };
 }
 
 /** Deshace un logro marcado por error. No es un castigo: solo corrige un toque equivocado. */
@@ -131,17 +166,15 @@ export function deshacer(juego: Juego, logroId: string): Juego {
   };
 }
 
-/** Siguiente especie por desbloquear, con lo que falta. */
-export function siguienteDesbloqueo(juego: Juego) {
-  const d = DESBLOQUEOS.find((x) => !juego.desbloqueadas.includes(x.especie));
-  if (!d) return null;
-  const anterior = [...DESBLOQUEOS].reverse().find((x) => x.total <= juego.ganadasTotal)?.total ?? 0;
-  return { especie: d.especie, meta: d.total, desde: anterior, falta: Math.max(0, d.total - juego.ganadasTotal) };
+/** Siguiente llegada sorpresa: cuántas huellitas faltan. */
+export function siguienteLlegada(juego: Juego) {
+  const meta = umbralLlegada(juego.llegadas);
+  const desde = juego.llegadas ? umbralLlegada(juego.llegadas - 1) : 0;
+  return { meta, desde, falta: Math.max(0, meta - juego.ganadasTotal) };
 }
 
-/** Especies desbloqueadas que aún no se han adoptado. */
-export const porAdoptar = (juego: Juego) =>
-  juego.desbloqueadas.filter((e) => !juego.mascotas.some((m) => m.especie === e));
+/** Animalitos que esperan en la puerta para ser adoptados. */
+export const porAdoptar = (juego: Juego) => juego.pendientes;
 
 /* ---------------- mascotas ---------------- */
 
@@ -152,8 +185,24 @@ export function adoptar(juego: Juego, especie: Especie, nombre: string, pelaje: 
     necesidades: { hambre: 80, limpieza: 90, mimos: 70, energia: 90 },
     actualizado: ahora, adoptada: ahora, alegreHasta: new Date(Date.now() + 30 * 60000).toISOString(),
   };
-  return { ...juego, mascotas: [...juego.mascotas, m], activaId: m.id };
+  const i = juego.pendientes.indexOf(especie);
+  const pendientes = i >= 0 ? [...juego.pendientes.slice(0, i), ...juego.pendientes.slice(i + 1)] : juego.pendientes;
+  return { ...juego, mascotas: [...juego.mascotas, m], activaId: m.id, pendientes };
 }
+
+/** Deja pasar de largo a un animalito que esperaba (volverá a haber más llegadas). */
+export function despedir(juego: Juego, especie: Especie): Juego {
+  const i = juego.pendientes.indexOf(especie);
+  return i < 0 ? juego : { ...juego, pendientes: [...juego.pendientes.slice(0, i), ...juego.pendientes.slice(i + 1)] };
+}
+
+/* ---------------- regalos para Rali ---------------- */
+
+export const regalosSinVer = (juego: Juego) => juego.regalos.filter((r) => !r.visto);
+export const regalosGuardados = (juego: Juego) => juego.regalos.filter((r) => !r.canjeado);
+export const verRegalos = (juego: Juego): Juego => ({ ...juego, regalos: juego.regalos.map((r) => (r.visto ? r : { ...r, visto: true })) });
+export const canjear = (juego: Juego, id: string): Juego =>
+  ({ ...juego, regalos: juego.regalos.map((r) => (r.id === id && !r.canjeado ? { ...r, visto: true, canjeado: new Date().toISOString() } : r)) });
 
 export function editarMascota(juego: Juego, id: string, cambios: Partial<Pick<Mascota, "nombre" | "pelaje" | "accesorio">>): Juego {
   return { ...juego, mascotas: juego.mascotas.map((m) => (m.id === id ? { ...m, ...cambios } : m)) };
@@ -191,3 +240,6 @@ export const banar = (juego: Juego, id: string) =>
 
 export const mimar = (juego: Juego, id: string) =>
   tocar(juego, id, (m) => ({ ...m, alegreHasta: new Date(Date.now() + 3 * 60000).toISOString(), necesidades: { ...m.necesidades, mimos: limitar(m.necesidades.mimos + MIMO) } }));
+
+export const marcarEntregado = (juego: Juego, id: string, si: boolean): Juego =>
+  ({ ...juego, regalos: juego.regalos.map((r) => (r.id === id ? { ...r, entregado: si ? new Date().toISOString() : undefined } : r)) });

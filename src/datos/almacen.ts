@@ -5,6 +5,7 @@
    - `decisiones`: qué se decidió en cada comida (lo que hay, otra cosa, algo diferente, sobras).
    - `alimentos`: alimentos usados o creados (de wger, de la base local o propios), por id.
    - `extras`: picoteos fuera de las 4 comidas, por fecha (alimentos + gramos).
+   - `diario`: diario personal (cómo se siente y qué ha pasado), por fecha.
    - `recetas`: recetas propias con sus ingredientes. Cada una tiene también su copia en plan.mealTemplates.
    ============================================================ */
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -14,6 +15,7 @@ import { juegoInicial } from "../juego/motor";
 import type { Juego } from "../juego/tipos";
 import type { Decisiones } from "../decisiones/decisiones";
 import type { Alimento, Item, RecetaPropia } from "../alimentos/tipos";
+import type { Diario } from "../diario/tipos";
 
 export interface Datos {
   plan: AppState;
@@ -22,6 +24,7 @@ export interface Datos {
   alimentos: Record<string, Alimento>;
   recetas: Record<string, RecetaPropia>;
   extras: Record<string, Item[]>;
+  diario: Diario;
 }
 
 const CLAVE = "comemos-rali-v1";
@@ -29,7 +32,7 @@ const CLAVE = "comemos-rali-v1";
 export function datosIniciales(): Datos {
   const plan = freshDefaultState();
   plan.settings.selectedPerson = "rali";
-  return { plan, juego: juegoInicial(), decisiones: {}, alimentos: {}, recetas: {}, extras: {} };
+  return { plan, juego: juegoInicial(), decisiones: {}, alimentos: {}, recetas: {}, extras: {}, diario: {} };
 }
 
 function cargar(): Datos {
@@ -45,6 +48,7 @@ function cargar(): Datos {
       alimentos: d.alimentos && typeof d.alimentos === "object" ? d.alimentos : {},
       recetas: d.recetas && typeof d.recetas === "object" ? d.recetas : {},
       extras: d.extras && typeof d.extras === "object" ? d.extras : {},
+      diario: d.diario && typeof d.diario === "object" ? d.diario : {},
     };
   } catch {
     return datosIniciales();
@@ -74,7 +78,14 @@ export function exportar(d: Datos) {
 /** Acepta una copia de esta app o un JSON completo de Comemos (solo reemplaza el plan). */
 export function importar(texto: string, actual: Datos): Datos {
   const v = JSON.parse(texto);
-  if (v?.app === "comemos-rali" && v.plan?.version === 1 && v.juego?.version === 1) return { plan: v.plan, juego: v.juego, decisiones: v.decisiones ?? {}, alimentos: v.alimentos ?? {}, recetas: v.recetas ?? {}, extras: v.extras ?? {} };
+  if (v?.app === "comemos-rali" && v.plan?.version === 1 && v.juego?.version === 1) {
+    // Copias de versiones anteriores: lo que falte se rellena con los valores de inicio.
+    const base = juegoInicial();
+    return {
+      plan: v.plan, juego: { ...base, ...v.juego, avisos: { ...base.avisos, ...v.juego.avisos } },
+      decisiones: v.decisiones ?? {}, alimentos: v.alimentos ?? {}, recetas: v.recetas ?? {}, extras: v.extras ?? {}, diario: v.diario ?? {},
+    };
+  }
   if (v?.version === 1 && v.profiles?.rali) return { ...actual, plan: { ...v, settings: { ...v.settings, selectedPerson: "rali" } } };
   throw new Error("Este JSON no es de Comemos ni de esta app.");
 }

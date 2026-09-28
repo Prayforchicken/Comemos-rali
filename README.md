@@ -7,10 +7,12 @@ Web instalable (PWA, en Vercel) y APK de Android con notificaciones.
 
 - **Hoy**: energía estimada (basal + vida + actividad), las 4 comidas con sus gramos, recetas y aprendizaje, gimnasio con su plan de sesión, agua y suplementos. Al marcar una comida se registra cuánto se comió, el hambre, si estaba rica, gramos servidos y nota.
 - **Decisiones por comida** (no por día): en cada toma se elige *lo que hay*, *otra cosa* (pizza, comer fuera… sin pesar), *algo diferente* (otra receta, con su ración calculada) o *sobras* (de una receta, con su ración, o escritas a mano). Todas cuentan como lo del plan y dan huellitas; el batch de la semana descuenta las raciones que no se van a cocinar. Viven en `src/decisiones/` y se guardan aparte del plan, así el JSON de Comemos no cambia.
-- **Diario (mini MyFitnessPal)**: lo comido frente al objetivo (energía, proteína, fibra), extras y picoteos, recetario propio (ingredientes con gramos → cada ración calculada; sale en "Algo diferente" y "Sobras") y alimentos guardados. En "Otra cosa" se apuntan alimentos reales con sus gramos.
+- **Diario → Mi día**: diario personal con cómo se siente (1–5), emociones y qué ha pasado; varios apuntes al día y resumen de la semana.
+- **Diario → Comida / Recetas / Raciones (mini MyFitnessPal)**: lo comido frente al objetivo (energía, proteína, fibra), extras y picoteos, recetario propio (ingredientes con gramos → cada ración calculada; sale en "Algo diferente" y "Sobras") y alimentos guardados. En "Otra cosa" se apuntan alimentos reales con sus gramos.
 - **Alimentos**: buscador en la base abierta de [wger](https://wger.de) (en la APK y la web; dentro de claude.ai no hay salida a internet), una base local de ~40 alimentos comunes con valores aproximados, y alimentos creados a mano. Los de wger que se usan se guardan para tenerlos sin conexión. Código en `src/alimentos/`.
-- **Huellitas** (solo en positivo): comida del plan +10, gimnasio +25, agua +5, día completo +15. No cumplir no resta nada.
-- **Mascotas**: gatito al empezar (pelajes: melocotón, nata, humo, fresita, europeo atigrado y blanco con manchitas); rata, mapache y urraca aparecen con las huellitas *ganadas en total* (120 / 350 / 700).
+- **Huellitas** (solo en positivo): comida "lo que hay" del plan +10; otra cosa, otra receta o sobras +8 (sin el bonus de seguir el plan); gimnasio +25, agua +5, día completo (4 comidas apuntadas) +15. No cumplir no resta nada.
+- **Mascotas**: gatito al empezar (pelajes: melocotón, nata, humo, fresita, europeo atigrado y blanco con manchitas). Al ganar 120 / 350 / 700 huellitas en total (y luego cada 500) llega un animalito **al azar** que se puede adoptar o dejar pasar. Nombre y aspecto se cambian cuando quieras.
+- **Chuches para Rali**: un animalito con todo bien cubierto (≥ 60) durante 36 h acumuladas trae una chuche *para Rali*. Se canjea (se gasta) y Adrián va a comprarle algo rico; la app permite avisarle y marcar cuando ya lo trajo.
   Cada mascota sube el bonus (x1, x1,25, x1,5, x1,75). Necesidades tipo tamagotchi que nunca llegan a cero: no mueren ni enferman.
 - **Chuches** (al final de Mascotas): se compran con huellitas. Cada especie tiene su favorita.
 - **Semana**: días con su energía, tracker de bullet journal, batch de 4 días (recetas, gramos, pasos), escalera de emergencia y días con más carga.
@@ -54,7 +56,11 @@ npm install
 npm run dev
 ```
 
+## Copias de seguridad
+
+Ajustes → **Guardar copia en archivo** guarda todo en un `.json` (en la APK abre el menú de compartir para mandarlo a Drive o WhatsApp). **Recuperar desde archivo** lo devuelve todo, también en otro móvil. La app recuerda cuándo fue la última copia y avisa en Hoy si pasa más de una semana.
+
 ## Límites de la versión de pruebas
 
-- Los datos viven en el móvil; no se sincronizan con el Comemos compartido. Se pueden pasar con Exportar/Importar.
+- Los datos viven en el móvil; no se sincronizan con el Comemos compartido. Se pasan con las copias de seguridad.
 - En la web, los avisos solo llegan con la app abierta. Los avisos fiables son los de la APK.

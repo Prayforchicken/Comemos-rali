@@ -18,7 +18,8 @@ const textoMult = (l: Logro) => (l.multiplicador > 1 ? `x${l.multiplicador.toLoc
 export interface DetalleComida { servido: number; comido: number; hambre: number; rico: number; nota: string; registrar: boolean }
 
 /** Rali se ha comido lo del plan (la cantidad que sea). Guarda el registro para el aprendizaje de raciones. */
-export function comidaDelPlan(d: Datos, fecha: string, comida: PlannedMeal, x: DetalleComida): Resultado {
+/** `delPlan`: true si es "lo que hay" (+10); cualquier otra decisión da +8. */
+export function comidaDelPlan(d: Datos, fecha: string, comida: PlannedMeal, x: DetalleComida, delPlan = true): Resultado {
   const registro: MealFeedback = {
     id: nuevoId("feedback"), date: fecha, createdAt: new Date().toISOString(), personId: "rali",
     slot: comida.slot, templateId: comida.template.id, plannedGrams: comida.grams, servedGrams: Math.max(1, Math.round(x.servido)),
@@ -27,13 +28,13 @@ export function comidaDelPlan(d: Datos, fecha: string, comida: PlannedMeal, x: D
   // Solo se aprende de las recetas que se pesan (no de "otra cosa" ni de sobras escritas a mano).
   const plan = x.registrar ? { ...d.plan, feedback: [registro, ...d.plan.feedback].slice(0, 500) } : d.plan;
   const premios: Premio[] = [];
-  const r = ganar(d.juego, fecha, "comida", PUNTOS.comida, comida.slot);
+  const r = ganar(d.juego, fecha, "comida", delPlan ? PUNTOS.comida : PUNTOS.comidaOtra, comida.slot);
   let juego = r.juego;
-  if (r.logro) premios.push({ puntos: r.logro.puntos, motivo: "¡Comida según el plan!", extra: textoMult(r.logro), nuevas: r.nuevas });
+  if (r.logro) premios.push({ puntos: r.logro.puntos, motivo: delPlan ? "¡Comida según el plan!" : "¡Comida apuntada!", extra: textoMult(r.logro) ?? (delPlan ? undefined : "Sin el bonus de seguir el plan"), nuevas: r.nuevas });
   if (SLOTS.every((s) => logroDe(juego, fecha, "comida", s))) {
     const r2 = ganar(juego, fecha, "dia-completo", PUNTOS.diaCompleto);
     juego = r2.juego;
-    if (r2.logro) premios.push({ puntos: r2.logro.puntos, motivo: "¡Día completo!", extra: "Las cuatro comidas del plan", nuevas: r2.nuevas });
+    if (r2.logro) premios.push({ puntos: r2.logro.puntos, motivo: "¡Día completo!", extra: "Las cuatro comidas apuntadas", nuevas: r2.nuevas });
   }
   return { datos: { ...d, plan, juego }, premios };
 }

@@ -6,9 +6,11 @@ import { agua, comidaDelPlan, gimnasio, suplemento, type DetalleComida, type Pre
 import { activitiesForDay, activityCalories, energyForDay, plannedTotals, servingAdjustment, shiftIsoDate, slotLabel, todayInTimezone } from "../comemos/engine";
 import { decidir, diaDecidido, TEXTO_DECISION, type ComidaDecidida, type TipoDecision } from "../decisiones/decisiones";
 import { ElegirDecision } from "../componentes/ElegirDecision";
-import { Boton, Campo, Hoja, Huellitas, Pastillas, Pildora, Seccion, Sprite, Washi } from "../componentes/base";
+import { Boton, Campo, Hoja, Huellitas, Pastillas, Pildora, Seccion, Sprite, Svg, Washi } from "../componentes/base";
 import { usePegatina } from "../componentes/Pegatinas";
-import { animoDe, deshacer, logroDe, TEXTO_ANIMO } from "../juego/motor";
+import { animoDe, deshacer, logroDe, regalosSinVer, TEXTO_ANIMO } from "../juego/motor";
+import { regaloIcono } from "../sprites/chuches.js";
+import { diasSinRespaldo } from "../datos/respaldo";
 import { PUNTOS, multiplicador } from "../juego/reglas";
 
 const DIAS = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"];
@@ -73,10 +75,27 @@ export function Hoy({ datos, cambiar, fecha, setFecha, ahora, sueno, irA }: Pant
           <span className="compi__txt">
             <b className="subtitulo">{mascota.nombre}</b>
             <span className={`rp-chip rp-chip--${animo}`}>{TEXTO_ANIMO[animo]}</span>
-            <span className="nota">Cada comida del plan: <b className="frambuesa">+{Math.round(PUNTOS.comida * mult)}</b>{mult > 1 ? ` (x${mult.toLocaleString("es-ES")})` : ""}</span>
+            <span className="nota">Lo del plan: <b className="frambuesa">+{Math.round(PUNTOS.comida * mult)}</b> · otra cosa: +{Math.round(PUNTOS.comidaOtra * mult)}{mult > 1 ? ` (x${mult.toLocaleString("es-ES")})` : ""}</span>
           </span>
         </button>
       ) : null}
+
+      {regalosSinVer(juego).length ? (
+        <button type="button" className="regalo-aviso" onClick={() => irA("mascotas")}>
+          <Svg html={regaloIcono(56)} />
+          <span><b className="subtitulo">¡{regalosSinVer(juego)[0].quien} te ha traído algo!</b><span className="nota">Por cuidarle tan bien. Míralo en Mascotas.</span></span>
+        </button>
+      ) : null}
+
+      {(() => {
+        const dias = diasSinRespaldo();
+        const hayQuePerder = juego.logros.length >= 10 || Object.keys(datos.diario).length >= 2;
+        return hayQuePerder && (dias === null || dias > 7) ? (
+          <button type="button" className="aviso-copia" onClick={() => irA("ajustes")}>
+            {dias === null ? "Aún no tienes copia de seguridad." : `Hace ${dias} días de tu última copia.`} <b>Guardar una →</b>
+          </button>
+        ) : null;
+      })()}
 
       {/* ---------- energía del día ---------- */}
       <section className="energia">
@@ -107,7 +126,7 @@ export function Hoy({ datos, cambiar, fecha, setFecha, ahora, sueno, irA }: Pant
         <h2 className="etiqueta"><span className="rp-subrayado">Lo que toca y cuánto</span></h2>
         <Pildora color="rosa">4 tomas</Pildora>
       </div>
-      <p className="nota">Cada comida se decide por separado. Cualquier opción cuenta como “lo del plan” y da huellitas.</p>
+      <p className="nota">Cada comida se decide por separado. “Lo que hay” da <b>+{Math.round(PUNTOS.comida * mult)}</b>; cualquier otra opción da <b>+{Math.round(PUNTOS.comidaOtra * mult)}</b> (sin el bonus de seguir el plan).</p>
       <div className="pila">
         {comidas.map((c) => {
           const logro = logroDe(juego, fecha, "comida", c.slot);
@@ -198,7 +217,7 @@ export function Hoy({ datos, cambiar, fecha, setFecha, ahora, sueno, irA }: Pant
 
       <MarcarComida comida={marcando} cerrar={() => setMarcando(null)} alGuardar={(x) => {
         if (!marcando) return;
-        const r = comidaDelPlan(datos, fecha, marcando, { ...x, registrar: !marcando.libre });
+        const r = comidaDelPlan(datos, fecha, marcando, { ...x, registrar: !marcando.libre }, marcando.decision.tipo === "plan");
         const aprendido = servingAdjustment(r.datos.plan.feedback, "rali", marcando.slot, marcando.template.id).note;
         cambiar(() => r.datos);
         setMarcando(null);

@@ -59,5 +59,15 @@ const T = TINTA;
       `<g fill="${T}"><ellipse cx="16" cy="19.5" rx="5.2" ry="4.2"/><circle cx="9.8" cy="13.4" r="2.2"/><circle cx="13.6" cy="10" r="2.2"/><circle cx="18.4" cy="10" r="2.2"/><circle cx="22.2" cy="13.4" r="2.2"/></g>`, tam, 32, 'huellitas');
   }
 
+  /* ---------- regalo (chuche para Rali que traen los animalitos) ---------- */
+  function regaloIcono(tam = 56) {
+    return svg(
+      s('M12 28 H52 V54 Q52 57 49 57 H15 Q12 57 12 54 Z', '#F7B3C4') +
+      s('M8 20 H56 V30 H8 Z', '#FCE1E8') +
+      s('M28 20 H36 V57 H28 Z', '#FBE5A2', 2.2) +
+      s('M32 20 Q20 4 14 12 Q10 20 32 20 Z', '#FBE5A2', 2.2) + s('M32 20 Q44 4 50 12 Q54 20 32 20 Z', '#FBE5A2', 2.2) +
+      `<circle cx="20" cy="40" r="2" fill="#fff"/><circle cx="44" cy="46" r="2" fill="#fff"/><circle cx="18" cy="50" r="1.6" fill="#fff"/>`,
+      tam, 64, 'regalo');
+  }
 
-export { chuche, CHUCHES, huellitaIcono };
+export { chuche, CHUCHES, huellitaIcono, regaloIcono };

@@ -1,5 +1,5 @@
-/* Diario (el "mini MyFitnessPal"): lo comido frente al objetivo, extras, recetas propias,
-   alimentos guardados y el aprendizaje de raciones. */
+/* Diario: "Mi día" (emociones y lo que ha pasado) y el mini MyFitnessPal:
+   lo comido frente al objetivo, extras, recetas propias, alimentos guardados y el aprendizaje de raciones. */
 import { useMemo, useState } from "react";
 import type { PantallaProps } from "../App";
 import { dividir, totales, aPlantilla } from "../alimentos/nutricion";
@@ -14,21 +14,22 @@ import { diaDecidido, SLOTS, TEXTO_DECISION } from "../decisiones/decisiones";
 import { logroDe } from "../juego/motor";
 import { fechaBonita } from "./Hoy";
 import { Registro } from "./Registro";
+import { MiDia } from "./MiDia";
 
-type Vista = "dia" | "recetas" | "alimentos" | "aprendizaje";
-const VISTAS: { v: Vista; t: string }[] = [{ v: "dia", t: "Día" }, { v: "recetas", t: "Recetas" }, { v: "alimentos", t: "Alimentos" }, { v: "aprendizaje", t: "Aprendizaje" }];
+type Vista = "midia" | "comida" | "recetas" | "aprendizaje";
+const VISTAS: { v: Vista; t: string }[] = [{ v: "midia", t: "Mi día" }, { v: "comida", t: "Comida" }, { v: "recetas", t: "Recetas" }, { v: "aprendizaje", t: "Raciones" }];
 
 export function Diario(props: PantallaProps) {
-  const [vista, setVista] = useState<Vista>("dia");
+  const [vista, setVista] = useState<Vista>("midia");
   return (
     <div className="pila">
-      <Titulo antes="Mi" marcado="diario" texto="Lo que comes, tus recetas y tus alimentos. Nada de aquí resta huellitas." />
+      <Titulo antes="Mi" marcado="diario" texto="Cómo estás, lo que comes y tus recetas. Nada de aquí resta huellitas." />
       <div className="segmento segmento--ancho" role="tablist">
         {VISTAS.map((x) => <button key={x.v} type="button" role="tab" aria-selected={vista === x.v} data-activa={vista === x.v} onClick={() => setVista(x.v)}>{x.t}</button>)}
       </div>
-      {vista === "dia" && <Dia {...props} />}
-      {vista === "recetas" && <Recetas {...props} />}
-      {vista === "alimentos" && <Alimentos {...props} />}
+      {vista === "midia" && <MiDia {...props} />}
+      {vista === "comida" && <Dia {...props} />}
+      {vista === "recetas" && <><Recetas {...props} /><h2 className="etiqueta"><span className="rp-subrayado">Alimentos</span></h2><Alimentos {...props} /></>}
       {vista === "aprendizaje" && <Registro {...props} incrustado />}
     </div>
   );

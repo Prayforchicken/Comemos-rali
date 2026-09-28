@@ -7,7 +7,8 @@ import { slotLabel } from "../comemos/engine";
 import type { MealSlot, Profile } from "../comemos/models";
 import { Boton, Campo, Confirmar, Interruptor, Seccion, Selector, Titulo } from "../componentes/base";
 import { usePegatina } from "../componentes/Pegatinas";
-import { datosIniciales, exportar, importar } from "../datos/almacen";
+import { datosIniciales, exportar, importar, type Datos } from "../datos/almacen";
+import { diasSinRespaldo, guardarRespaldo } from "../datos/respaldo";
 
 const SLOTS: MealSlot[] = ["breakfast", "lunch", "snack", "dinner"];
 
@@ -19,6 +20,13 @@ export function Ajustes({ datos, cambiar }: PantallaProps) {
   useEffect(() => { void tienePermiso().then(setPermiso); }, []);
   const [json, setJson] = useState("");
   const [reinicio, setReinicio] = useState(false);
+  const [recuperar, setRecuperar] = useState<{ datos: Datos; nombre: string } | null>(null);
+  const [dias, setDias] = useState(diasSinRespaldo());
+  const resumen = (d: Datos) => `${d.juego.mascotas.length} animalitos, ${d.juego.huellitas} huellitas, ${Object.keys(d.diario ?? {}).length} días de diario, ${Object.keys(d.recetas ?? {}).length} recetas`;
+  const cargarTexto = (texto: string, nombre: string) => {
+    try { setRecuperar({ datos: importar(texto, datos), nombre }); }
+    catch (e) { pegatina({ motivo: "Ese archivo no sirve", extra: (e as Error).message }); }
+  };
   const bases = plan.mealTemplates.filter((m) => m.kind === "batch" && m.active).map((m) => ({ v: m.id, t: m.shortName }));
   const reparto = plan.profiles.rali.mealSplit;
 
@@ -70,17 +78,40 @@ export function Ajustes({ datos, cambiar }: PantallaProps) {
       </Seccion>
 
       <Seccion titulo="Copia de seguridad" washi="cielo">
-        <p className="nota">Todo cabe en un JSON: perfil, horarios, recetas, raciones, agua, aprendizaje y tus animalitos. También acepta un JSON completo de Comemos.</p>
-        <div className="fila fila--envuelve">
-          <Boton variante="papel" onClick={async () => { const t = exportar(datos); setJson(t); try { await navigator.clipboard.writeText(t); pegatina({ motivo: "Copia en el portapapeles" }); } catch { pegatina({ motivo: "Copia lista abajo", extra: "Selecciónala y cópiala" }); } }}>Exportar</Boton>
-          <Boton variante="papel" disabled={!json.trim()} onClick={() => { try { const nuevo = importar(json, datos); cambiar(() => nuevo); pegatina({ motivo: "Copia importada" }); } catch (e) { pegatina({ motivo: "No se pudo importar", extra: (e as Error).message }); } }}>Importar lo pegado</Boton>
-        </div>
-        <textarea className="entrada json" value={json} onChange={(e) => setJson(e.target.value)} placeholder="Pega aquí un JSON para importarlo" rows={5} spellCheck={false} />
+        <p className="cuerpo">Guarda <b>todo</b> en un archivo por si se borra la app o cambias de móvil: animalitos, huellitas, diario, recetas, alimentos y plan.</p>
+        <p className={`nota ${dias === null || dias > 7 ? "nota--mantequilla" : "nota--menta"}`}>
+          {dias === null ? "Aún no has guardado ninguna copia en este móvil." : dias === 0 ? "Última copia: hoy." : `Última copia: hace ${dias} ${dias === 1 ? "día" : "días"}.`}
+          {dias === null || dias > 7 ? " Te recomiendo guardar una ahora." : ""}
+        </p>
+        <Boton variante="cielo" className="ancho" onClick={async () => {
+          const r = await guardarRespaldo(datos);
+          setDias(diasSinRespaldo());
+          pegatina(r === "guardado" ? { motivo: "Copia guardada", extra: esNativo() ? "Guárdala en Drive o envíatela" : "Mírala en Descargas" } : r === "cancelado" ? { motivo: "Copia cancelada" } : { motivo: "No se pudo guardar", extra: "Prueba con “Copiar como texto”" });
+        }}>Guardar copia en archivo</Boton>
+        <label className="rp-btn rp-btn--papel ancho subir-archivo">
+          <span>Recuperar desde archivo</span>
+          <input type="file" accept="application/json,.json,text/plain" onChange={async (e) => {
+            const f = e.target.files?.[0];
+            e.target.value = "";
+            if (f) cargarTexto(await f.text(), f.name);
+          }} />
+        </label>
+        <details className="avanzado">
+          <summary>Como texto (avanzado)</summary>
+          <div className="fila fila--envuelve">
+            <Boton variante="papel" onClick={async () => { const t = exportar(datos); setJson(t); try { await navigator.clipboard.writeText(t); pegatina({ motivo: "Copia en el portapapeles" }); } catch { pegatina({ motivo: "Copia lista abajo", extra: "Selecciónala y cópiala" }); } }}>Copiar como texto</Boton>
+            <Boton variante="papel" disabled={!json.trim()} onClick={() => cargarTexto(json, "texto pegado")}>Recuperar lo pegado</Boton>
+          </div>
+          <textarea className="entrada json" value={json} onChange={(e) => setJson(e.target.value)} placeholder="Pega aquí una copia (o un JSON completo de Comemos)" rows={5} spellCheck={false} />
+        </details>
         <button type="button" className="enlace frambuesa" onClick={() => setReinicio(true)}>Empezar de cero</button>
       </Seccion>
 
-      <Confirmar abierta={reinicio} cerrar={() => setReinicio(false)} titulo="¿Empezar de cero?" texto="Se borra todo lo de este móvil: plan, registros y animalitos. Exporta una copia antes si quieres poder volver." si="Sí, empezar de cero" alConfirmar={() => { cambiar(() => datosIniciales()); setReinicio(false); }} />
-      <p className="nota centro">Comemos · Rali · versión de pruebas 0.4</p>
+      <Confirmar abierta={Boolean(recuperar)} cerrar={() => setRecuperar(null)} titulo="¿Recuperar esta copia?"
+        texto={recuperar ? `“${recuperar.nombre}”: ${resumen(recuperar.datos)}. Sustituye todo lo que hay ahora en este móvil (${resumen(datos)}).` : ""}
+        si="Sí, recuperar" alConfirmar={() => { if (recuperar) { cambiar(() => recuperar.datos); pegatina({ motivo: "¡Copia recuperada!", extra: "Todo ha vuelto a su sitio" }); } setRecuperar(null); }} />
+      <Confirmar abierta={reinicio} cerrar={() => setReinicio(false)} titulo="¿Empezar de cero?" texto="Se borra todo lo de este móvil: plan, diario, recetas y animalitos. Guarda una copia antes si quieres poder volver." si="Sí, empezar de cero" alConfirmar={() => { cambiar(() => datosIniciales()); setReinicio(false); }} />
+      <p className="nota centro">Comemos · Rali · versión de pruebas 0.5</p>
     </div>
   );
 }

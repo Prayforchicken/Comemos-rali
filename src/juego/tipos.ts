@@ -21,6 +21,20 @@ export interface Mascota {
   adoptada: string;
   /** Hasta cuándo se muestra contenta por haber recibido algo (ISO). */
   alegreHasta?: string;
+  /** Minutos acumulados con todas las necesidades bien cubiertas (para traer un regalo). */
+  cuidadoMin?: number;
+}
+
+/** Chuche para Rali que trae un animalito bien cuidado. Al canjearla, Adrián compra algo rico. */
+export interface Regalo {
+  id: string;
+  mascotaId: string;
+  quien: string;        // nombre del animalito cuando lo trajo
+  especie: Especie;
+  traido: string;       // ISO
+  visto: boolean;
+  canjeado?: string;    // ISO cuando se canjeó
+  entregado?: string;   // ISO cuando Adrián ya trajo el capricho
 }
 
 export type TipoLogro = "comida" | "gimnasio" | "agua" | "dia-completo";
@@ -47,8 +61,14 @@ export interface Juego {
   activaId: string | null;
   inventario: Partial<Record<ChucheId, number>>;
   logros: Logro[];
-  /** Especies que ya se pueden adoptar (se añaden al cruzar un umbral). */
+  /** Obsoleto (versiones 0.1–0.4): especies desbloqueadas en progresión fija. Se conserva por compatibilidad. */
   desbloqueadas: Especie[];
+  /** Animalitos que han llegado (al azar) y esperan a ser adoptados. */
+  pendientes: Especie[];
+  /** Cuántos umbrales de llegada se han cruzado ya. */
+  llegadas: number;
+  /** Chuches para Rali traídas por los animalitos. */
+  regalos: Regalo[];
   avisos: {
     comidas: boolean;
     gimnasio: boolean;
