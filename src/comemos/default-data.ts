@@ -1,5 +1,28 @@
 import type { AppState, MealTemplate } from "./models";
 
+/* ------------------------------------------------------------------
+   Recetas reconstruidas "a mano": para cada plato se eligió una lista
+   real de ingredientes y una cantidad realista por ración, y las
+   cifras (kcal/proteína/fibra) salen de sumar esos ingredientes por
+   100 g, igual que hace `totales()` en alimentos/nutricion.ts cuando
+   Rali o Adrián montan una receta propia desde el buscador.
+
+   Aviso: en esta sesión no había wger.de en vivo (sin extensión de
+   Chrome ni puente al ordenador conectados, y el acceso directo del
+   entorno está bloqueado), así que los valores por 100 g son tablas
+   nutricionales de referencia bien establecidas para cada alimento
+   genérico, no una consulta real a la API de wger. Cuando vuelvas a
+   tener wger a mano, esto se puede refinar buscando cada ingrediente
+   y sustituyendo el número por el de su ficha real (mismo formato:
+   kcal y macros por 100 g).
+
+   "Plenny Shake Pro" no se ha tocado: no es una receta de varios
+   ingredientes que se pueda montar en wger, es un único producto
+   comercial y sus cifras ya venían de la etiqueta real del fabricante.
+   "Comida fuera sin compensación" tampoco: no representa ningún plato
+   concreto, es el hueco para "lo que sea que comáis fuera".
+   ------------------------------------------------------------------ */
+
 export const DEFAULT_MEALS: MealTemplate[] = [
   {
     id: "plenny-pro",
@@ -41,20 +64,23 @@ export const DEFAULT_MEALS: MealTemplate[] = [
     name: "Boloñesa de soja, beans y verduras escondidas",
     shortName: "Soja + beans",
     kind: "batch",
-    baseKcal: 650,
-    baseProteinG: 43,
-    baseFibreG: 18,
-    baseGrams: 520,
+    baseKcal: 683,
+    baseProteinG: 44.9,
+    baseFibreG: 20,
+    baseGrams: 580,
     ingredients: [
-      "soja texturizada",
-      "alubias o judías",
-      "tomate cocinado",
-      "zanahoria, calabacín y champiñón triturados",
-      "pasta o arroz según el día",
-      "queso al servir",
+      "45 g de soja texturizada seca (por ración)",
+      "60 g de alubias cocidas escurridas (por ración)",
+      "150 g de tomate triturado (por ración)",
+      "60 g de zanahoria cocida triturada (por ración)",
+      "50 g de calabacín cocido triturado (por ración)",
+      "50 g de champiñón cocido triturado (por ración)",
+      "140 g de pasta cocida (por ración)",
+      "10 g de aceite de oliva (por ración)",
+      "15 g de queso curado al servir (por ración)",
     ],
     instructions:
-      "Haz una olla para cuatro días. Congela dos días en porciones y guarda dos en nevera. Cocina el arroz o la pasta aparte para poder variar.",
+      "Haz una olla para cuatro días con esas cantidades multiplicadas por ración. Congela dos días en porciones y guarda dos en nevera. Cocina el arroz o la pasta aparte para poder variar.",
     tags: ["batch", "beans", "mucha fibra", "verdura escondida"],
     slots: ["lunch", "dinner"],
     active: true,
@@ -64,20 +90,21 @@ export const DEFAULT_MEALS: MealTemplate[] = [
     name: "Curry cremoso de tofu, guisantes y calabaza",
     shortName: "Curry de tofu",
     kind: "batch",
-    baseKcal: 600,
-    baseProteinG: 36,
-    baseFibreG: 14,
-    baseGrams: 500,
+    baseKcal: 693,
+    baseProteinG: 38.6,
+    baseFibreG: 13.8,
+    baseGrams: 624,
     ingredients: [
-      "tofu dorado",
-      "guisantes",
-      "calabaza o zanahoria triturada",
-      "leche de coco ligera o yogur",
-      "curry suave para Rali; picante extra al servir",
-      "arroz o fideos aparte",
+      "170 g de tofu firme dorado (por ración)",
+      "110 g de guisantes (por ración)",
+      "100 g de calabaza cocida triturada (por ración)",
+      "100 g de leche de coco ligera (por ración)",
+      "130 g de arroz blanco cocido aparte (por ración)",
+      "6 g de curry suave en polvo (por ración)",
+      "8 g de aceite de oliva (por ración)",
     ],
     instructions:
-      "Tritura la base vegetal, añade tofu dorado y guisantes. Congela la salsa en cubos o porciones; el arroz puede ser congelado de emergencia.",
+      "Tritura la base vegetal, añade tofu dorado y guisantes. Congela la salsa en cubos o porciones; el arroz puede ser congelado de emergencia. Curry suave para Rali; picante extra al servir.",
     tags: ["batch", "cremoso", "verdura escondida", "congelable"],
     slots: ["lunch", "dinner"],
     active: true,
@@ -87,16 +114,19 @@ export const DEFAULT_MEALS: MealTemplate[] = [
     name: "Guiso de lentejas con verduras trituradas",
     shortName: "Lentejas",
     kind: "batch",
-    baseKcal: 580,
-    baseProteinG: 32,
-    baseFibreG: 21,
-    baseGrams: 560,
+    baseKcal: 557,
+    baseProteinG: 31.2,
+    baseFibreG: 29,
+    baseGrams: 660,
     ingredients: [
-      "lentejas",
-      "zanahoria, calabacín y champiñón triturados",
-      "tomate cocinado",
-      "patata o arroz",
-      "huevo o queso como extra opcional",
+      "280 g de lentejas cocidas (por ración)",
+      "60 g de zanahoria cocida triturada (por ración)",
+      "50 g de calabacín cocido triturado (por ración)",
+      "50 g de champiñón cocido triturado (por ración)",
+      "150 g de tomate triturado (por ración)",
+      "60 g de patata cocida (por ración)",
+      "10 g de aceite de oliva (por ración)",
+      "huevo o queso como extra opcional (no cuenta en estas cifras)",
     ],
     instructions: "Cuece una olla espesa. Congela en monodosis y añade el extra proteico al recalentar.",
     tags: ["batch", "beans", "mucha fibra", "congelable"],
@@ -108,11 +138,11 @@ export const DEFAULT_MEALS: MealTemplate[] = [
     name: "Huevos, beans, pan y queso",
     shortName: "Huevos + beans",
     kind: "emergency",
-    baseKcal: 610,
-    baseProteinG: 36,
-    baseFibreG: 16,
-    baseGrams: 470,
-    ingredients: ["2 huevos", "200 g de beans", "60 g de pan", "20 g de queso"],
+    baseKcal: 648,
+    baseProteinG: 41.7,
+    baseFibreG: 14.4,
+    baseGrams: 390,
+    ingredients: ["2 huevos (110 g)", "200 g de alubias cocidas (beans)", "60 g de pan blanco", "20 g de queso curado"],
     instructions:
       "Calienta los beans mientras haces los huevos. Si hay crema de verduras congelada, úsala como entrante. La siguiente comida vuelve al plan normal.",
     tags: ["10 minutos", "emergencia", "beans", "queso"],
@@ -124,11 +154,17 @@ export const DEFAULT_MEALS: MealTemplate[] = [
     name: "Buldak mejorado con tofu, huevo y guisantes",
     shortName: "Buldak completo",
     kind: "quick",
-    baseKcal: 790,
-    baseProteinG: 38,
-    baseFibreG: 10,
+    baseKcal: 823,
+    baseProteinG: 35.3,
+    baseFibreG: 8.9,
     baseGrams: 520,
-    ingredients: ["1 paquete de buldak", "tofu crujiente", "1 huevo", "guisantes", "queso opcional"],
+    ingredients: [
+      "1 paquete de buldak (fideos + salsa, ≈100 g)",
+      "100 g de tofu crujiente",
+      "1 huevo (55 g)",
+      "80 g de guisantes",
+      "queso opcional (no cuenta en estas cifras)",
+    ],
     instructions:
       "Usa solo la cantidad de salsa picante que apetezca. Añade proteína y guisantes para que no sea solo noodles; no compenses después.",
     tags: ["antojo", "asiático", "15 minutos", "crujiente"],
@@ -140,15 +176,15 @@ export const DEFAULT_MEALS: MealTemplate[] = [
     name: "Arroz congelado, proteína y salsa en cubos",
     shortName: "Arroz de emergencia",
     kind: "emergency",
-    baseKcal: 640,
-    baseProteinG: 35,
-    baseFibreG: 11,
+    baseKcal: 588,
+    baseProteinG: 44.9,
+    baseFibreG: 8.4,
     baseGrams: 510,
     ingredients: [
-      "arroz blanco congelado",
-      "Garden Gourmet, tofu o seitán",
-      "guisantes u otra verdura congelada",
-      "2–3 cubos de curry o tomate",
+      "200 g de arroz blanco congelado (ya cocido)",
+      "130 g de seitán cocido (o Garden Gourmet/tofu)",
+      "100 g de guisantes congelados",
+      "80 g de cubos de salsa de curry o tomate congelada",
     ],
     instructions: "Air fryer para la proteína; microondas para arroz, verduras y salsa. Todo listo en unos 12 minutos.",
     tags: ["12 minutos", "congelador", "emergencia"],
@@ -160,11 +196,17 @@ export const DEFAULT_MEALS: MealTemplate[] = [
     name: "Noodles de despensa con tofu y verduras",
     shortName: "Noodles rápidos",
     kind: "emergency",
-    baseKcal: 660,
-    baseProteinG: 36,
-    baseFibreG: 10,
+    baseKcal: 669,
+    baseProteinG: 42.7,
+    baseFibreG: 12.2,
     baseGrams: 520,
-    ingredients: ["noodles", "tofu o huevo", "guisantes", "salsa de soja", "cubos de salsa de verduras"],
+    ingredients: [
+      "100 g de noodles secos",
+      "150 g de tofu firme (o 2 huevos)",
+      "90 g de guisantes",
+      "15 g de salsa de soja",
+      "60 g de cubo de salsa de verduras congelada",
+    ],
     instructions: "Hierve los noodles y termina todo en la misma olla. Añade chile por separado para que cada persona elija.",
     tags: ["15 minutos", "despensa", "asiático"],
     slots: ["lunch", "dinner"],
