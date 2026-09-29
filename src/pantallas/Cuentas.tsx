@@ -27,7 +27,6 @@ export function Cuentas({ datos, cambiar, hoy, ahora }: PantallaProps) {
     <div className="pila" style={{ gap: 18 }}>
       <header className="pila" style={{ gap: 6 }}>
         <h1 style={{ fontSize: 30, fontWeight: 800 }}>Cuentas</h1>
-        <p className="nota">A dónde van las raciones de tus batch.</p>
       </header>
 
       <Segmento etiqueta="Periodo" valor={periodo} alCambiar={setPeriodo} opciones={[{ v: "semana", t: "7 días" }, { v: "mes", t: "30 días" }, { v: "siempre", t: "Siempre" }]} />
@@ -38,7 +37,7 @@ export function Cuentas({ datos, cambiar, hoy, ahora }: PantallaProps) {
         <div><span>A la basura</span><b className="dato-grande basura">{r.basura}</b></div>
       </div>
       <p className="nota">
-        {r.total ? <><b>{r.pctBasura} %</b> de las raciones acabó en la basura. Has cocinado {r.lotes} batch en este periodo.</> : "Aún no ha salido ninguna ración en este periodo."}
+        {r.total ? <>{r.pctBasura} % a la basura · {r.lotes} batch</> : "Sin raciones en este periodo"}
       </p>
 
       {r.recetas.length ? (
@@ -74,7 +73,6 @@ export function Cuentas({ datos, cambiar, hoy, ahora }: PantallaProps) {
             </div>
           ))}
         </div>
-        <p className="nota">La raya negra marca tu objetivo. Las barras suman solo lo que apuntas en la app.</p>
       </section>
 
       <section className="tarjeta tarjeta--plana">
@@ -94,7 +92,7 @@ export function Cuentas({ datos, cambiar, hoy, ahora }: PantallaProps) {
               );
             })}
           </div>
-        ) : <p className="nota">Cuando cocines tu primer batch aparecerá aquí.</p>}
+        ) : <p className="nota">Todavía no hay tápers.</p>}
       </section>
 
       <LoteDetalle lote={detalle} datos={datos} cambiar={cambiar} cerrar={() => setDetalle(null)} ahora={ahora} />

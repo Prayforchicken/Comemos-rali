@@ -1,6 +1,6 @@
 /* Hoja con todo lo de un táper: qué lleva, a dónde ha ido cada ración y arreglos. */
 import { useState } from "react";
-import { fechaCorta, fechaLarga, MOMENTO } from "../nucleo/fechas";
+import { fechaCorta, MOMENTO } from "../nucleo/fechas";
 import { borrarLote, cambiarRaciones, deshacer, quedan, sacar } from "../nucleo/lotes";
 import type { Datos, Destino, Lote } from "../nucleo/tipos";
 import { Boton, Confirmar, Hoja, Paso } from "./base";
@@ -17,7 +17,7 @@ export function LoteDetalle({ lote, datos, cambiar, cerrar, ahora }: {
   const q = quedan(l);
   return (
     <Hoja abierta cerrar={cerrar} titulo={l.nombre}>
-      <p className="nota">Hecho el {fechaLarga(l.hecho)}. Cada ración tiene {l.porRacion.kcal} kcal y {Math.round(l.porRacion.proteina)} g de proteína.</p>
+      <p className="nota">Hecho el {fechaCorta(l.hecho)} · {l.porRacion.kcal} kcal/ración</p>
 
       <div className="fila fila--entre">
         <span>Salieron</span>
@@ -40,13 +40,13 @@ export function LoteDetalle({ lote, datos, cambiar, cerrar, ahora }: {
 
       {l.ingredientes.length ? (
         <details className="pliegue">
-          <summary>Qué lleva una ración</summary>
+          <summary><span>Ingredientes</span><span className="nota">1 ración</span></summary>
           <ul className="lista-simple">
             {l.ingredientes.map((i) => <li key={i.alimentoId}><span>{i.nombre}</span><span className="mono">{i.gramos} g</span></li>)}
           </ul>
+          {l.guardar ? <p className="nota" style={{ marginTop: 10 }}>{l.guardar}</p> : null}
         </details>
       ) : null}
-      {l.guardar ? <p className="nota">{l.guardar}</p> : null}
 
       <div className="acciones">
         {q > 0 ? (

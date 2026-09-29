@@ -85,7 +85,7 @@ export function Hoy(props: PantallaProps) {
 
       {esNativo() && datos.ajustes.avisos && !permiso ? (
         <div className="aviso aviso--info fila fila--entre">
-          <span>Activa los avisos para que no se te olvide lo que tienes hecho.</span>
+          <span>Avisos desactivados</span>
           <Boton variante="secundario" onClick={() => void pedirPermiso().then(setPermiso)}>Activar</Boton>
         </div>
       ) : null}
@@ -127,8 +127,6 @@ function Raciones({ l }: { l: Lote }) {
 }
 
 function Taper({ l, tomas, hoy, sacar, verDetalle }: { l: Lote; tomas: Toma[]; hoy: string; sacar: (l: Lote, d: Destino) => void; verDetalle: () => void }) {
-  const q = quedan(l);
-  const f = frescura(l, hoy);
   return (
     <section className="tarjeta tarjeta--taper" aria-label={`Táper: ${l.nombre}`}>
       <Cinta l={l} hoy={hoy} />
@@ -136,23 +134,11 @@ function Taper({ l, tomas, hoy, sacar, verDetalle }: { l: Lote; tomas: Toma[]; h
         {tomas[0] ? <span className="ceja">{paraCuando(tomas[0], hoy)}</span> : null}
         <h2 className="tarjeta__titulo">{l.nombre}</h2>
       </div>
-      <div className="fila fila--entre">
-        <Raciones l={l} />
-        <span className="nota"><b className="mono">{q}</b> de {l.raciones}</span>
-      </div>
-      {f.estado === "ya" ? <p className="aviso aviso--ya">Lleva {f.dias} días en la nevera: lo normal es 3 o 4. Cómetelo hoy o dáselo a Rali.</p> : null}
-      {f.estado === "tirar" ? <p className="aviso aviso--tirar">Lleva {f.dias} días en la nevera. Lo seguro es tirarlo.</p> : null}
-      {tomas.length ? (
-        <div className="pila" style={{ gap: 6 }}>
-          <span className="nota">Te da para</span>
-          <Tomas tomas={tomas} hoy={hoy} />
-        </div>
-      ) : null}
+      <Raciones l={l} />
+      {tomas.length ? <Tomas tomas={tomas} hoy={hoy} /> : null}
       <p className="macros-linea">
         <span><b>{l.porRacion.kcal}</b> kcal</span>
         <span><b>{Math.round(l.porRacion.proteina)}</b> g prot.</span>
-        <span><b>{Math.round(l.porRacion.carbos)}</b> g hidratos</span>
-        <span><b>{Math.round(l.porRacion.grasa)}</b> g grasa</span>
       </p>
       <div className="acciones">
         <Boton grande ancho icono={<IcoComer />} onClick={() => sacar(l, "comida")}>Me la como</Boton>
@@ -161,7 +147,7 @@ function Taper({ l, tomas, hoy, sacar, verDetalle }: { l: Lote; tomas: Toma[]; h
           <Boton variante="basura" icono={<IcoBasura />} onClick={() => sacar(l, "basura")}>A la basura</Boton>
         </div>
       </div>
-      <button type="button" className="enlace" onClick={verDetalle}>Ver detalles del táper</button>
+      <button type="button" className="enlace" onClick={verDetalle}>Detalles</button>
     </section>
   );
 }
@@ -171,10 +157,9 @@ function OtroTaper({ l, hoy, sacar, verDetalle }: { l: Lote; hoy: string; sacar:
   return (
     <div className="nevera-fila">
       <button type="button" className="nevera-fila__txt" style={{ background: "none", border: 0, padding: 0, textAlign: "left" }} onClick={verDetalle}>
-        <span className="ceja">También hay</span>
         <b>{l.nombre}</b>
         <span className="nota" style={{ color: f.estado === "bien" ? undefined : f.estado === "ya" ? "var(--ya)" : "var(--tirar)" }}>
-          {quedan(l)} de {l.raciones} · hecho {haceDias(l.hecho, hoy)}{f.estado !== "bien" ? " · cómetelo ya" : ""}
+          {quedan(l)} de {l.raciones} · {f.estado === "bien" ? `hecho ${haceDias(l.hecho, hoy)}` : `${f.dias} días`}
         </span>
       </button>
       <div className="nevera-fila__botones">
@@ -200,7 +185,6 @@ function Batch({ datos, cambiar, ahora, hoy, modo, irA, quedanTotal }: PantallaP
     return (
       <section className="tarjeta tarjeta--plana">
         <h2 className="titulo-seccion">No hay recetas que proponer</h2>
-        <p className="nota">Las has apartado todas. Vuelve a activar alguna o crea una tuya.</p>
         <Boton variante="secundario" onClick={() => irA("recetas")}>Ir a recetas</Boton>
       </section>
     );
@@ -218,7 +202,6 @@ function Batch({ datos, cambiar, ahora, hoy, modo, irA, quedanTotal }: PantallaP
         <span className="pila" style={{ gap: 4 }}>
           <span className="ceja">Siguiente batch</span>
           <b>{receta.nombre}</b>
-          <span className="nota">{quedanTotal <= 1 ? "Queda 1 ración: mira ya qué te falta." : "Para cuando se acabe lo de la nevera."}</span>
         </span>
         <span className="flecha" aria-hidden="true">›</span>
       </button>
@@ -253,21 +236,12 @@ function Batch({ datos, cambiar, ahora, hoy, modo, irA, quedanTotal }: PantallaP
         </p>
       </div>
 
-      <div className="fila fila--entre">
-        <Paso valor={raciones} min={1} max={8} alCambiar={setRaciones} texto={(v) => `${v} ${v === 1 ? "ración" : "raciones"}`} />
-      </div>
-      <div className="pila" style={{ gap: 6 }}>
-        <span className="nota">Te da para</span>
-        <Tomas tomas={tomas} hoy={hoy} />
-      </div>
+      <Paso valor={raciones} min={1} max={8} alCambiar={setRaciones} texto={(v) => `${v} ${v === 1 ? "ración" : "raciones"}`} />
+      <Tomas tomas={tomas} hoy={hoy} />
 
-      <div className="pila" style={{ gap: 8 }}>
-        <div className="fila fila--entre">
-          <h3 className="titulo-seccion">Mira en la nevera</h3>
-          <span className="nota mono">{lineas.length - falta.length}/{lineas.length}</span>
-        </div>
-        <p className="nota">Marca lo que ya tienes en casa.</p>
-        <div className="lista-nevera">
+      <details className="pliegue">
+        <summary><span>Ingredientes</span><span className="nota">{falta.length ? `faltan ${falta.length}` : "todo en casa"}</span></summary>
+        <div className="lista-nevera" style={{ marginTop: 8 }}>
           {lineas.map((l) => {
             const si = tengo.has(l.alimentoId);
             return (
@@ -280,16 +254,11 @@ function Batch({ datos, cambiar, ahora, hoy, modo, irA, quedanTotal }: PantallaP
             );
           })}
         </div>
-        {falta.length ? (
-          <div className="falta">
-            <p><b>Te falta:</b> {falta.map((l) => l.nombre.toLowerCase().replace(/ \(.*\)$/, "")).join(", ")}.</p>
-            <Boton variante="secundario" icono={<IcoCopiar />} onClick={() => void copiar()}>Copiar lo que falta</Boton>
-          </div>
-        ) : <p className="aviso aviso--info">Tienes todos los ingredientes.</p>}
-      </div>
+        {falta.length ? <div style={{ marginTop: 10 }}><Boton variante="secundario" icono={<IcoCopiar />} onClick={() => void copiar()}>Copiar lo que falta</Boton></div> : null}
+      </details>
 
       <details className="pliegue">
-        <summary>Cómo se hace ({receta.pasos.length} pasos)</summary>
+        <summary><span>Pasos</span></summary>
         <ol className="pasos">{receta.pasos.map((p) => <li key={p}>{p}</li>)}</ol>
         <p className="nota" style={{ marginTop: 10 }}>{receta.guardar}</p>
       </details>
@@ -301,7 +270,7 @@ function Batch({ datos, cambiar, ahora, hoy, modo, irA, quedanTotal }: PantallaP
           <Boton variante="secundario" onClick={() => setEligiendo(true)}>Elegir receta</Boton>
         </div>
       </div>
-      <button type="button" className="enlace" onClick={() => setAMano(true)}>Añadir algo que ya tienes hecho</button>
+      <button type="button" className="enlace" onClick={() => setAMano(true)}>Añadir algo ya hecho</button>
 
       <Hoja abierta={eligiendo} cerrar={() => setEligiendo(false)} titulo="¿Qué cocinas?">
         <div className="pila" style={{ gap: 8 }}>
@@ -337,7 +306,6 @@ function AnadirAMano({ abierta, cerrar, hoy, alGuardar }: {
   const n = (x: string) => Math.max(0, Number(x.replace(",", ".")) || 0);
   return (
     <Hoja abierta={abierta} cerrar={cerrar} titulo="Añadir a la nevera">
-      <p className="nota">Sobras, algo que te han traído o una receta que no está en la app.</p>
       <Campo etiqueta="Qué es"><input className="entrada" id="mano-nombre" value={nombre} maxLength={50} placeholder="Ej.: paella del domingo" onChange={(e) => setNombre(e.target.value)} /></Campo>
       <div className="fila fila--entre">
         <span>Raciones</span>
@@ -419,7 +387,7 @@ function HoyLlevas({ datos, cambiar, ahora, hoy }: PantallaProps) {
             </div>
           ))}
         </div>
-      ) : <p className="nota">Todavía no has apuntado nada. Cada ración que marques con «Me la como» se suma aquí.</p>}
+      ) : null}
 
       <div className="chips">
         <button type="button" className="chip" onClick={() => anadir([plennyItem(99)])}>+ Plenny Pro</button>
@@ -428,7 +396,6 @@ function HoyLlevas({ datos, cambiar, ahora, hoy }: PantallaProps) {
       </div>
 
       <Hoja abierta={otra} cerrar={() => setOtra(false)} titulo="Otra cosa">
-        <p className="nota">Apunta lo que comes fuera de los tápers y cuánto. Una cantidad aproximada sirve.</p>
         <div className="chips">
           {ATAJOS_OTRA.map((id) => BASE.find((x) => x.id === id)!).map((a) => (
             <button key={a.id} type="button" className="chip" onClick={() => setItems((l) => [...l, { alimentoId: a.id, nombre: a.nombre, gramos: a.porcion?.gramos ?? 100, n: a.n }])}>

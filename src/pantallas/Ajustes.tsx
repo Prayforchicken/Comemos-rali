@@ -7,8 +7,6 @@ import { avisoDePrueba, esNativo } from "../avisos/notificaciones";
 import { Boton, Campo, Confirmar, Interruptor, Paso, useAvisar } from "../componentes/base";
 import { AJUSTES_INICIALES, datosIniciales, importar } from "../datos/almacen";
 import { diasSinRespaldo, guardarRespaldo } from "../datos/respaldo";
-import { racionDe } from "../nucleo/lotes";
-import { propuestaActual } from "../nucleo/propuesta";
 import type { Ajustes as TAjustes, Objetivo } from "../nucleo/tipos";
 
 export function Ajustes({ datos, cambiar }: PantallaProps) {
@@ -21,7 +19,6 @@ export function Ajustes({ datos, cambiar }: PantallaProps) {
     const v = Math.max(0, Math.round(Number(e.target.value) || 0));
     cambiar((d) => ({ ...d, ajustes: { ...d.ajustes, objetivo: { ...d.ajustes.objetivo, [k]: v } } }));
   };
-  const ejemplo = propuestaActual(datos);
   const sinCopia = diasSinRespaldo();
 
   return (
@@ -32,7 +29,6 @@ export function Ajustes({ datos, cambiar }: PantallaProps) {
 
       <section className="tarjeta tarjeta--plana">
         <h2 className="titulo-seccion">Objetivo diario</h2>
-        <p className="nota">Es orientativo y solo se usa en las barras de «Hoy llevas».</p>
         <div className="rejilla">
           <Campo etiqueta="kcal"><input className="entrada" id="obj-kcal" type="number" inputMode="numeric" value={a.objetivo.kcal} onChange={obj("kcal")} /></Campo>
           <Campo etiqueta="Proteína (g)"><input className="entrada" id="obj-prot" type="number" inputMode="numeric" value={a.objetivo.proteina} onChange={obj("proteina")} /></Campo>
@@ -48,14 +44,12 @@ export function Ajustes({ datos, cambiar }: PantallaProps) {
           <span>Raciones cada vez</span>
           <Paso valor={a.raciones} min={1} max={8} alCambiar={(v) => poner({ raciones: v })} texto={(v) => `${v} ${v === 1 ? "ración" : "raciones"}`} />
         </div>
-        <p className="nota">4 raciones = comida y cena durante 2 días.</p>
         <div className="campo">
           <span>Tamaño de cada ración</span>
           <div className="chips">
             {[80, 90, 100, 110, 120, 130].map((v) => <button key={v} type="button" className="chip" data-activo={a.tamano === v} onClick={() => poner({ tamano: v })}>{v} %</button>)}
           </div>
         </div>
-        {ejemplo ? <p className="nota">Ahora, una ración de {ejemplo.corto.toLowerCase()} son <b>{racionDe(ejemplo, a.tamano).kcal} kcal</b>.</p> : null}
       </section>
 
       <section className="tarjeta tarjeta--plana">
@@ -65,7 +59,6 @@ export function Ajustes({ datos, cambiar }: PantallaProps) {
           <Campo etiqueta="Cena"><input className="entrada" id="hora-cena" type="time" value={a.horaCena} onChange={(e) => e.target.value && poner({ horaCena: e.target.value })} /></Campo>
           <Campo etiqueta="Aviso para cocinar"><input className="entrada" id="hora-cocinar" type="time" value={a.horaCocinar} onChange={(e) => e.target.value && poner({ horaCocinar: e.target.value })} /></Campo>
         </div>
-        <p className="nota">Una ración que marcas antes de la mitad entre comida y cena cuenta como comida; después, como cena.</p>
       </section>
 
       <section className="tarjeta tarjeta--plana">
@@ -73,13 +66,13 @@ export function Ajustes({ datos, cambiar }: PantallaProps) {
           <h2 className="titulo-seccion">Avisos</h2>
           <Interruptor etiqueta="Avisos" activo={a.avisos} alCambiar={(v) => poner({ avisos: v })} />
         </div>
-        <p className="nota">A la hora de comer y cenar te dice qué táper toca, y el día que se acaba la nevera te avisa para cocinar.{esNativo() ? "" : " En la web solo llegan con la app abierta; en la APK, siempre."}</p>
+        {esNativo() ? null : <p className="nota">En la web solo llegan con la app abierta.</p>}
         <Boton variante="secundario" onClick={() => void avisoDePrueba().then((ok) => avisar({ texto: ok ? "Llegará en 5 segundos" : "Sin permiso para avisos" }))}>Probar un aviso</Boton>
       </section>
 
       <section className="tarjeta tarjeta--plana">
         <h2 className="titulo-seccion">Copia de seguridad</h2>
-        <p className="nota">{sinCopia === null ? "Aún no has guardado ninguna copia." : `Última copia: hace ${sinCopia} ${sinCopia === 1 ? "día" : "días"}.`} Los datos están solo en este móvil. Con una copia no los pierdes y puedes pasarlos a otro.</p>
+        <p className="nota">{sinCopia === null ? "Sin copias todavía" : `Última copia: hace ${sinCopia} ${sinCopia === 1 ? "día" : "días"}`}</p>
         <div className="acciones__dos">
           <Boton onClick={() => void guardarRespaldo(datos).then((r) => avisar({ texto: r === "guardado" ? "Copia guardada" : r === "cancelado" ? "Copia cancelada" : "No se ha podido guardar" }))}>Guardar copia</Boton>
           <Boton variante="secundario" onClick={() => archivo.current?.click()}>Recuperar</Boton>

@@ -198,7 +198,7 @@ h1, h2, h3 { font-family: var(--f-titulo); text-wrap: balance; letter-spacing: -
 .icono-boton--basura { background: var(--basura-suave); color: var(--basura); }
 
 /* Selector de raciones (− 4 +) */
-.paso { display: inline-flex; align-items: center; border: 1px solid var(--linea); border-radius: 999px; background: var(--superficie-2); }
+.paso { justify-self: start; display: inline-flex; align-items: center; border: 1px solid var(--linea); border-radius: 999px; background: var(--superficie-2); }
 .paso button { width: 40px; height: 40px; border: 0; background: none; font-size: 22px; font-weight: 700; color: var(--cobalto); border-radius: 999px; }
 .paso button:disabled { color: var(--linea); }
 .paso span { min-width: 92px; text-align: center; font-weight: 700; }
@@ -236,7 +236,9 @@ h1, h2, h3 { font-family: var(--f-titulo); text-wrap: balance; letter-spacing: -
 .falta p { font-size: 15px; }
 
 details.pliegue { border-top: 1px solid var(--linea); padding-top: 10px; }
-details.pliegue summary { cursor: pointer; font-weight: 700; color: var(--cobalto); list-style: none; display: flex; justify-content: space-between; align-items: center; min-height: 36px; }
+details.pliegue summary { cursor: pointer; font-weight: 700; color: var(--cobalto); list-style: none; display: flex; gap: 10px; align-items: center; min-height: 40px; }
+details.pliegue summary > span:first-child { flex: 1; }
+details.pliegue summary .nota { font-weight: 400; }
 details.pliegue summary::-webkit-details-marker { display: none; }
 details.pliegue summary::after { content: "+"; font: 700 22px/1 var(--f-titulo); }
 details.pliegue[open] summary::after { content: "–"; }

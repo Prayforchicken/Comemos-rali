@@ -45,7 +45,6 @@ export function Recetas({ datos, cambiar, hoy, irA }: PantallaProps) {
     <div className="pila" style={{ gap: 18 }}>
       <header className="pila" style={{ gap: 6 }}>
         <h1 style={{ fontSize: 30, fontWeight: 800 }}>Recetas</h1>
-        <p className="nota">Primero te propongo las que nunca has hecho y después la que hace más tiempo que no cocinas. Las de la app aguantan 2 días en la nevera.</p>
       </header>
 
       <div className="pila" style={{ gap: 8 }}>
@@ -56,7 +55,6 @@ export function Recetas({ datos, cambiar, hoy, irA }: PantallaProps) {
       {apartadas.length ? (
         <div className="pila" style={{ gap: 8 }}>
           <h2 className="titulo-seccion">Apartadas</h2>
-          <p className="nota">Estas no salen en las propuestas. Toca una para recuperarla.</p>
           {apartadas.map((r) => <Fila key={r.id} r={r} />)}
         </div>
       ) : null}
@@ -94,15 +92,21 @@ function DetalleReceta({ r, raciones, tamano, apartada, alProponer, alApartar, a
   return (
     <>
       <p className="macros-linea">
-        <span><b>{t.kcal}</b> kcal</span><span><b>{Math.round(t.proteina)}</b> g prot.</span>
-        <span><b>{Math.round(t.carbos)}</b> g hidratos</span><span><b>{Math.round(t.grasa)}</b> g grasa</span><span><b>{Math.round(t.fibra)}</b> g fibra</span>
+        <span><b>{t.kcal}</b> kcal/ración</span><span><b>{Math.round(t.proteina)}</b> g prot.</span><span><b>{r.minutos}</b> min</span>
       </p>
-      <p className="nota">Valores de una ración. Cantidades para {raciones} raciones:</p>
-      <ul className="lista-simple">
-        {lista(r, raciones, tamano).map((l) => <li key={l.alimentoId}><span>{l.nombre}{l.aprox ? <span className="nota"> · {l.aprox}</span> : null}</span><span className="mono">{l.gramos} g</span></li>)}
-      </ul>
-      {r.pasos.length ? <ol className="pasos">{r.pasos.map((p) => <li key={p}>{p}</li>)}</ol> : null}
-      {r.guardar ? <p className="nota">{r.guardar}</p> : null}
+      <details className="pliegue">
+        <summary><span>Ingredientes</span><span className="nota">{raciones} raciones</span></summary>
+        <ul className="lista-simple">
+          {lista(r, raciones, tamano).map((l) => <li key={l.alimentoId}><span>{l.nombre}</span><span className="mono">{l.gramos} g</span></li>)}
+        </ul>
+      </details>
+      {r.pasos.length || r.guardar ? (
+        <details className="pliegue">
+          <summary><span>Pasos</span></summary>
+          <ol className="pasos">{r.pasos.map((p) => <li key={p}>{p}</li>)}</ol>
+          {r.guardar ? <p className="nota" style={{ marginTop: 10 }}>{r.guardar}</p> : null}
+        </details>
+      ) : null}
       <div className="acciones">
         <Boton ancho onClick={alProponer}>Proponérmela ahora</Boton>
         <Boton variante="secundario" ancho onClick={() => alApartar(!apartada)}>{apartada ? "Vuelve a proponérmela" : "No me la propongas"}</Boton>
