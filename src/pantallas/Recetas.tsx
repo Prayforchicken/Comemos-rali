@@ -45,7 +45,7 @@ export function Recetas({ datos, cambiar, hoy, irA }: PantallaProps) {
     <div className="pila" style={{ gap: 18 }}>
       <header className="pila" style={{ gap: 6 }}>
         <h1 style={{ fontSize: 30, fontWeight: 800 }}>Recetas</h1>
-        <p className="nota">Te las propongo por turnos: primero las que nunca has hecho, luego la que hace más que no haces. Todas aguantan 2 días en la nevera.</p>
+        <p className="nota">Primero te propongo las que nunca has hecho y después la que hace más tiempo que no cocinas. Las de la app aguantan 2 días en la nevera.</p>
       </header>
 
       <div className="pila" style={{ gap: 8 }}>
@@ -56,7 +56,7 @@ export function Recetas({ datos, cambiar, hoy, irA }: PantallaProps) {
       {apartadas.length ? (
         <div className="pila" style={{ gap: 8 }}>
           <h2 className="titulo-seccion">Apartadas</h2>
-          <p className="nota">No te las propongo. Tócalas para recuperarlas.</p>
+          <p className="nota">Estas no salen en las propuestas. Toca una para recuperarla.</p>
           {apartadas.map((r) => <Fila key={r.id} r={r} />)}
         </div>
       ) : null}
@@ -97,7 +97,7 @@ function DetalleReceta({ r, raciones, tamano, apartada, alProponer, alApartar, a
         <span><b>{t.kcal}</b> kcal</span><span><b>{Math.round(t.proteina)}</b> g prot.</span>
         <span><b>{Math.round(t.carbos)}</b> g hidratos</span><span><b>{Math.round(t.grasa)}</b> g grasa</span><span><b>{Math.round(t.fibra)}</b> g fibra</span>
       </p>
-      <p className="nota">Por ración. Cantidades para {raciones} raciones:</p>
+      <p className="nota">Valores de una ración. Cantidades para {raciones} raciones:</p>
       <ul className="lista-simple">
         {lista(r, raciones, tamano).map((l) => <li key={l.alimentoId}><span>{l.nombre}{l.aprox ? <span className="nota"> · {l.aprox}</span> : null}</span><span className="mono">{l.gramos} g</span></li>)}
       </ul>

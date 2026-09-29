@@ -66,7 +66,7 @@ export function Hoy(props: PantallaProps) {
     if (!r.salida) return;
     const salida = r.salida;
     cambiar(() => r.datos);
-    const acabado = quedan(l) === 1 ? ` · se acabó` : "";
+    const acabado = quedan(l) === 1 ? ` · era la última` : "";
     avisar({
       texto: destino === "comida" ? `${texto.comida}: ${MOMENTO[salida.momento].toLowerCase()} · ${l.porRacion.kcal} kcal${acabado}` : `${texto[destino]}${acabado}`,
       deshacer: () => cambiar((d) => deshacer(d, l.id, salida.id)),
@@ -141,7 +141,7 @@ function Taper({ l, tomas, hoy, sacar, verDetalle }: { l: Lote; tomas: Toma[]; h
         <span className="nota"><b className="mono">{q}</b> de {l.raciones}</span>
       </div>
       {f.estado === "ya" ? <p className="aviso aviso--ya">Lleva {f.dias} días en la nevera: lo normal es 3 o 4. Cómetelo hoy o dáselo a Rali.</p> : null}
-      {f.estado === "tirar" ? <p className="aviso aviso--tirar">Lleva {f.dias} días. Si huele o sabe raro, no lo pruebes: a la basura.</p> : null}
+      {f.estado === "tirar" ? <p className="aviso aviso--tirar">Lleva {f.dias} días en la nevera. Lo seguro es tirarlo.</p> : null}
       {tomas.length ? (
         <div className="pila" style={{ gap: 6 }}>
           <span className="nota">Te da para</span>
@@ -161,7 +161,7 @@ function Taper({ l, tomas, hoy, sacar, verDetalle }: { l: Lote; tomas: Toma[]; h
           <Boton variante="basura" icono={<IcoBasura />} onClick={() => sacar(l, "basura")}>A la basura</Boton>
         </div>
       </div>
-      <button type="button" className="enlace" onClick={verDetalle}>Qué lleva, historial y arreglos</button>
+      <button type="button" className="enlace" onClick={verDetalle}>Ver detalles del táper</button>
     </section>
   );
 }
@@ -235,7 +235,7 @@ function Batch({ datos, cambiar, ahora, hoy, modo, irA, quedanTotal }: PantallaP
 
   const copiar = async () => {
     const res = await compartirTexto("Lista de la compra", textoCompra(receta.nombre, falta.length ? falta : lineas));
-    avisar({ texto: res === "copiado" ? "Lista copiada" : res === "compartido" ? "Lista lista para compartir" : "No se ha podido copiar" });
+    avisar({ texto: res === "copiado" ? "Lista copiada" : res === "compartido" ? "Lista compartida" : "No se ha podido copiar" });
   };
 
   return (
@@ -266,7 +266,7 @@ function Batch({ datos, cambiar, ahora, hoy, modo, irA, quedanTotal }: PantallaP
           <h3 className="titulo-seccion">Mira en la nevera</h3>
           <span className="nota mono">{lineas.length - falta.length}/{lineas.length}</span>
         </div>
-        <p className="nota">Marca lo que ya tienes. Lo que quede sin marcar es lo que te falta.</p>
+        <p className="nota">Marca lo que ya tienes en casa.</p>
         <div className="lista-nevera">
           {lineas.map((l) => {
             const si = tengo.has(l.alimentoId);
@@ -285,7 +285,7 @@ function Batch({ datos, cambiar, ahora, hoy, modo, irA, quedanTotal }: PantallaP
             <p><b>Te falta:</b> {falta.map((l) => l.nombre.toLowerCase().replace(/ \(.*\)$/, "")).join(", ")}.</p>
             <Boton variante="secundario" icono={<IcoCopiar />} onClick={() => void copiar()}>Copiar lo que falta</Boton>
           </div>
-        ) : <p className="aviso aviso--info">Lo tienes todo. A cocinar.</p>}
+        ) : <p className="aviso aviso--info">Tienes todos los ingredientes.</p>}
       </div>
 
       <details className="pliegue">
@@ -301,7 +301,7 @@ function Batch({ datos, cambiar, ahora, hoy, modo, irA, quedanTotal }: PantallaP
           <Boton variante="secundario" onClick={() => setEligiendo(true)}>Elegir receta</Boton>
         </div>
       </div>
-      <button type="button" className="enlace" onClick={() => setAMano(true)}>¿Ya tienes algo hecho? Añádelo a la nevera</button>
+      <button type="button" className="enlace" onClick={() => setAMano(true)}>Añadir algo que ya tienes hecho</button>
 
       <Hoja abierta={eligiendo} cerrar={() => setEligiendo(false)} titulo="¿Qué cocinas?">
         <div className="pila" style={{ gap: 8 }}>
@@ -337,7 +337,7 @@ function AnadirAMano({ abierta, cerrar, hoy, alGuardar }: {
   const n = (x: string) => Math.max(0, Number(x.replace(",", ".")) || 0);
   return (
     <Hoja abierta={abierta} cerrar={cerrar} titulo="Añadir a la nevera">
-      <p className="nota">Sobras, algo que te han traído o una receta que no está en la app. Así no se te olvida.</p>
+      <p className="nota">Sobras, algo que te han traído o una receta que no está en la app.</p>
       <Campo etiqueta="Qué es"><input className="entrada" id="mano-nombre" value={nombre} maxLength={50} placeholder="Ej.: paella del domingo" onChange={(e) => setNombre(e.target.value)} /></Campo>
       <div className="fila fila--entre">
         <span>Raciones</span>
@@ -419,7 +419,7 @@ function HoyLlevas({ datos, cambiar, ahora, hoy }: PantallaProps) {
             </div>
           ))}
         </div>
-      ) : <p className="nota">Aún nada. Las raciones que marques como «me la como» se suman aquí solas.</p>}
+      ) : <p className="nota">Todavía no has apuntado nada. Cada ración que marques con «Me la como» se suma aquí.</p>}
 
       <div className="chips">
         <button type="button" className="chip" onClick={() => anadir([plennyItem(99)])}>+ Plenny Pro</button>
@@ -428,7 +428,7 @@ function HoyLlevas({ datos, cambiar, ahora, hoy }: PantallaProps) {
       </div>
 
       <Hoja abierta={otra} cerrar={() => setOtra(false)} titulo="Otra cosa">
-        <p className="nota">Comer fuera, un capricho, fruta… Apunta qué y cuánto (aproximado vale).</p>
+        <p className="nota">Apunta lo que comes fuera de los tápers y cuánto. Una cantidad aproximada sirve.</p>
         <div className="chips">
           {ATAJOS_OTRA.map((id) => BASE.find((x) => x.id === id)!).map((a) => (
             <button key={a.id} type="button" className="chip" onClick={() => setItems((l) => [...l, { alimentoId: a.id, nombre: a.nombre, gramos: a.porcion?.gramos ?? 100, n: a.n }])}>

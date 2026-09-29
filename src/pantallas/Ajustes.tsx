@@ -32,7 +32,7 @@ export function Ajustes({ datos, cambiar }: PantallaProps) {
 
       <section className="tarjeta tarjeta--plana">
         <h2 className="titulo-seccion">Objetivo diario</h2>
-        <p className="nota">Orientativo. Solo sirve para las barras de «Hoy llevas».</p>
+        <p className="nota">Es orientativo y solo se usa en las barras de «Hoy llevas».</p>
         <div className="rejilla">
           <Campo etiqueta="kcal"><input className="entrada" id="obj-kcal" type="number" inputMode="numeric" value={a.objetivo.kcal} onChange={obj("kcal")} /></Campo>
           <Campo etiqueta="Proteína (g)"><input className="entrada" id="obj-prot" type="number" inputMode="numeric" value={a.objetivo.proteina} onChange={obj("proteina")} /></Campo>
@@ -79,7 +79,7 @@ export function Ajustes({ datos, cambiar }: PantallaProps) {
 
       <section className="tarjeta tarjeta--plana">
         <h2 className="titulo-seccion">Copia de seguridad</h2>
-        <p className="nota">{sinCopia === null ? "Aún no has guardado ninguna copia." : `Última copia: hace ${sinCopia} ${sinCopia === 1 ? "día" : "días"}.`} Todo vive en este móvil; la copia sirve para no perderlo o pasarlo a otro.</p>
+        <p className="nota">{sinCopia === null ? "Aún no has guardado ninguna copia." : `Última copia: hace ${sinCopia} ${sinCopia === 1 ? "día" : "días"}.`} Los datos están solo en este móvil. Con una copia no los pierdes y puedes pasarlos a otro.</p>
         <div className="acciones__dos">
           <Boton onClick={() => void guardarRespaldo(datos).then((r) => avisar({ texto: r === "guardado" ? "Copia guardada" : r === "cancelado" ? "Copia cancelada" : "No se ha podido guardar" }))}>Guardar copia</Boton>
           <Boton variante="secundario" onClick={() => archivo.current?.click()}>Recuperar</Boton>

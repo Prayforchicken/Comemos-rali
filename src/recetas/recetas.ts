@@ -10,7 +10,7 @@ import { alimentoBase } from "../alimentos/base";
 import type { Item } from "../alimentos/tipos";
 import type { Receta } from "../nucleo/tipos";
 
-const ARROZ = " Enfría el arroz rápido (extendido) y guárdalo en menos de 1 hora.";
+const ARROZ = " Extiende el arroz para que se enfríe rápido y guárdalo en menos de 1 hora.";
 
 function ing(lista: [id: string, gramos: number][]): Item[] {
   return lista.map(([id, gramos]) => {
@@ -31,7 +31,7 @@ export const RECETAS: Receta[] = [
       ["arroz-basmati", 65], ["skyr", 100],
     ]),
     pasos: [
-      "Pon el arroz a cocer (unos 12 min). Mientras, pica la cebolla, el ajo y el jengibre.",
+      "Pon el arroz a cocer, unos 12 min. Mientras, pica la cebolla, el ajo y el jengibre.",
       "Sofríe la cebolla en el aceite 5 min a fuego medio. Añade ajo, jengibre y curry y remueve 1 min.",
       "Echa el tomate y la leche de coco y deja 10 min a fuego suave.",
       "Añade los garbanzos escurridos, 5 min más, y al final las espinacas hasta que se ablanden.",
@@ -69,7 +69,7 @@ export const RECETAS: Receta[] = [
     ]),
     pasos: [
       "Pica cebolla, pimiento, ajo y zanahoria y sofríelo en el aceite 8 min en una olla.",
-      "Fuera del fuego añade pimentón y comino (que no se quemen) y después el tomate.",
+      "Fuera del fuego añade pimentón y comino para que no se quemen, y después el tomate.",
       "Echa las lentejas lavadas, la patata en trozos y agua que las cubra dos dedos.",
       "Cuece 35–40 min a fuego suave hasta que estén tiernas. Mientras, cuece los huevos 10 min.",
       "Reparte en tápers con un huevo pelado por ración. El pan, al comer.",
@@ -105,7 +105,7 @@ export const RECETAS: Receta[] = [
     ]),
     pasos: [
       "Pon el arroz a cocer. Seca el tofu con papel, córtalo en dados y rebózalo en la maicena.",
-      "Dora el tofu en el aceite (o 15 min en la air fryer a 200 °C) hasta que esté crujiente.",
+      "Dora el tofu en el aceite hasta que esté crujiente, o 15 min en la air fryer a 200 °C.",
       "Cuece el brócoli al vapor o 4–5 min en el micro: que quede verde y firme.",
       "Salsa: soja, miel, ajo y jengibre rallados y un chorrito de agua. Redúcela 2 min en la sartén y mézclala con el tofu.",
       "Reparte arroz, brócoli y tofu. Sésamo por encima.",

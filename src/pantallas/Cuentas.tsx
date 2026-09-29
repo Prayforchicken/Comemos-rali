@@ -38,7 +38,7 @@ export function Cuentas({ datos, cambiar, hoy, ahora }: PantallaProps) {
         <div><span>A la basura</span><b className="dato-grande basura">{r.basura}</b></div>
       </div>
       <p className="nota">
-        {r.total ? <><b>{r.pctBasura} %</b> de las raciones a la basura · <b>{r.lotes}</b> {r.lotes === 1 ? "batch cocinado" : "batch cocinados"}</> : "Aún no ha salido ninguna ración en este periodo."}
+        {r.total ? <><b>{r.pctBasura} %</b> de las raciones acabó en la basura. Has cocinado {r.lotes} batch en este periodo.</> : "Aún no ha salido ninguna ración en este periodo."}
       </p>
 
       {r.recetas.length ? (
@@ -74,7 +74,7 @@ export function Cuentas({ datos, cambiar, hoy, ahora }: PantallaProps) {
             </div>
           ))}
         </div>
-        <p className="nota">La raya negra es tu objetivo. Solo cuenta lo que apuntas.</p>
+        <p className="nota">La raya negra marca tu objetivo. Las barras suman solo lo que apuntas en la app.</p>
       </section>
 
       <section className="tarjeta tarjeta--plana">

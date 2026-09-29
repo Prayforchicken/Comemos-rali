@@ -72,12 +72,12 @@ export function Buscador({ guardados, alAnadir, alGuardarAlimento }: {
       {t.length >= 3 ? (
         <>
           <p className="nota">
-            {wger.estado === "buscando" ? "Buscando en wger…" : wger.estado === "sin-red" ? "wger no responde (sin internet o en la vista previa). Tienes la base local y tus alimentos." : wger.lista.length ? "De wger:" : wger.estado === "ok" ? "wger no tiene nada con ese nombre." : ""}
+            {wger.estado === "buscando" ? "Buscando en wger…" : wger.estado === "sin-red" ? "wger no responde. Busco solo en la base local y en tus alimentos." : wger.lista.length ? "De wger:" : wger.estado === "ok" ? "wger no tiene nada con ese nombre." : ""}
           </p>
           <div className="alimentos-op">{wger.lista.map((a) => <Fila key={a.id} a={a} />)}</div>
         </>
       ) : null}
-      <button type="button" className="enlace" onClick={() => setCrear(true)}>¿No está? Crear alimento a mano</button>
+      <button type="button" className="enlace" onClick={() => setCrear(true)}>Crear un alimento a mano</button>
     </div>
   );
 }
@@ -111,7 +111,7 @@ function CrearAlimento({ nombreInicial, cancelar, alCrear }: { nombreInicial: st
   return (
     <div className="buscador">
       <h3>Nuevo alimento</h3>
-      <p className="nota">Copia los valores "por 100 g" de la etiqueta.</p>
+      <p className="nota">Copia los valores «por 100 g» de la etiqueta.</p>
       <Campo etiqueta="Nombre"><input className="entrada" id="nuevo-nombre" value={a.nombre} onChange={v("nombre")} /></Campo>
       <div className="rejilla">
         <Campo etiqueta="kcal / 100 g"><input className="entrada" id="nuevo-kcal" inputMode="decimal" value={a.kcal} onChange={v("kcal")} /></Campo>

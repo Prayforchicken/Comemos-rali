@@ -17,7 +17,7 @@ export function LoteDetalle({ lote, datos, cambiar, cerrar, ahora }: {
   const q = quedan(l);
   return (
     <Hoja abierta cerrar={cerrar} titulo={l.nombre}>
-      <p className="nota">Hecho el <b>{fechaLarga(l.hecho)}</b> · {l.porRacion.kcal} kcal y {Math.round(l.porRacion.proteina)} g de proteína por ración</p>
+      <p className="nota">Hecho el {fechaLarga(l.hecho)}. Cada ración tiene {l.porRacion.kcal} kcal y {Math.round(l.porRacion.proteina)} g de proteína.</p>
 
       <div className="fila fila--entre">
         <span>Salieron</span>
@@ -55,7 +55,7 @@ export function LoteDetalle({ lote, datos, cambiar, cerrar, ahora }: {
             cerrar();
           }}>Tirar lo que queda ({q})</Boton>
         ) : null}
-        <button type="button" className="enlace enlace--suave" onClick={() => setBorrando(true)}>Borrar este táper (fue un error)</button>
+        <button type="button" className="enlace enlace--suave" onClick={() => setBorrando(true)}>Borrar este táper</button>
       </div>
 
       <Confirmar abierta={borrando} cerrar={() => setBorrando(false)} titulo="¿Borrar este táper?"

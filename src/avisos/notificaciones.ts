@@ -38,7 +38,7 @@ export function calcularAvisos(d: Datos, ahora = new Date()): Aviso[] {
       id: idDe(toma.fecha, toma.momento === "comida" ? 1 : 2),
       cuando: aFecha(toma.fecha, toma.momento === "comida" ? d.ajustes.horaComida : d.ajustes.horaCena),
       titulo: `${MOMENTO[toma.momento]}: ${lote.nombre}`,
-      texto: n > 1 ? `Está en la nevera (quedan ${n} raciones). Márcala al comértela.` : "Es la última ración. Márcala al comértela.",
+      texto: n > 1 ? `Quedan ${n} raciones en la nevera. Márcala cuando te la comas.` : "Es la última ración de la nevera. Márcala cuando te la comas.",
     });
   }
 
