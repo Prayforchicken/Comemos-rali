@@ -58,6 +58,15 @@ export function haceDias(f: string, hoy: string) {
 
 export const MOMENTO: Record<Momento, string> = { comida: "Comida", cena: "Cena" };
 
+/** "Caduca en 3 días", "Caduca mañana", "Caduca hoy", "Caducó hace 2 días". */
+export function cuentaAtras(caduca: string, hoy: string) {
+  const d = diasEntre(hoy, caduca);
+  if (d < 0) return `Caducó hace ${-d} ${d === -1 ? "día" : "días"}`;
+  if (d === 0) return "Caduca hoy";
+  if (d === 1) return "Caduca mañana";
+  return `Caduca en ${d} días`;
+}
+
 /** "850 g" o "1,8 kg". */
 export const pesoTexto = (g: number) => (g < 1000 ? `${Math.round(g)} g` : `${(g / 1000).toLocaleString("es-ES", { maximumFractionDigits: 1 })} kg`);
 

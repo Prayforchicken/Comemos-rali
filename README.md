@@ -15,17 +15,23 @@ Web instalable (PWA, en Vercel) y APK de Android con avisos.
    Al momento ves kcal, proteína, hidratos y grasa frente a lo que toca en esa comida o cena:
    en rojo lo que falta (y cuántos gramos más de qué táper lo cubren), en blanco lo que sobra.
    "Apuntar" descuenta los gramos del táper y guarda cuánto comiste de cada cosa ese día.
+   Si comes otra cosa (pizza, un bocata…), quitas los tápers con × y añades "+ Otra cosa":
+   cuenta en los macros y esa comida o cena queda hecha sin tocar la nevera.
 4. **Para Rali o a la basura**, también en gramos, desde el detalle del táper. Todo se cuenta.
 5. **Semana.** Qué comes en cada toma de los próximos 7 días y qué día vuelves a cocinar.
 
 Además:
-- **En la nevera**: cada táper con su tipo, lo que queda y sus macros por 100 g. Sobras a mano con sus valores.
-- **Frescura**: a los 3–4 días avisa "cómetelo ya"; a los 5, "mejor tirarlo".
+- **En la nevera**: cada táper con su tipo, lo que queda, sus macros por 100 g y una cuenta atrás hasta que caduca
+  ("Caduca en 2 días"). Va ordenada por caducidad: lo primero es lo que antes hay que comer o tirar.
+  Mañana o hoy sale en ámbar ("cómetelo ya"); caducado, en rojo ("a la basura"). La fecha se cambia en el detalle.
+- **Caducidad**: cada receta dice cuántos días aguanta (y cada parte los suyos: el arroz, 3). Las sobras a mano
+  llevan la suya. Lo caducado no se propone en el plato ni se planea en la semana.
 - **Comido hoy**: lo apuntado con sus gramos, macros del día y botones rápidos (Plenny, "otra cosa").
 - **Recetas**: 8 de batch vegetarianas; se proponen por turnos. Recetas propias como plato combinado
   o como principal + guarnición.
 - **Cuentas**: gramos comidos, para Rali y tirados (7 días, 30 días, siempre), por táper, kcal por día.
-- **Avisos** (APK): a la hora de comer y cenar, qué tápers tocan; la tarde en que toca cocinar, qué receta.
+- **Avisos** (APK): a la hora de comer y cenar, qué tápers tocan; la tarde en que toca cocinar, qué receta;
+  a las 11:00 del día que caduca algo, "Caduca hoy".
 - **Copia de seguridad** en archivo (Ajustes). Las copias antiguas (en raciones) se pasan solas a gramos.
 
 ## Estructura
@@ -35,7 +41,7 @@ src/
   nucleo/        La lógica, sin pantallas (funciones puras, con pruebas en pruebas/).
     tipos.ts       Qué se guarda: Receta (con sus partes), Lote (un táper), Salida (gramos que salen), Ajustes.
     receta.ts      Tipos P / H / P.C., macros de una ración y peso estimado de lo cocinado.
-    lotes.ts       La nevera: cocinar, sacar gramos, pesar, frescura y a qué tomas da lo que hay.
+    lotes.ts       La nevera: cocinar, sacar gramos, pesar, caducidad y a qué tomas da lo que hay.
     plato.ts       Tu plato: macros de lo pesado frente a lo que toca, qué falta y qué sobra.
     semana.ts      Plan de 7 días y cuándo volver a cocinar.
     propuesta.ts   Qué cocinar: turno de recetas y lista de ingredientes con unidades.

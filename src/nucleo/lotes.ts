@@ -27,20 +27,22 @@ export function por100(l: Lote): Por100 {
 /** Kcal y macros de `g` gramos de un táper. */
 export const macrosDe = (l: Lote, g: number): Totales => ({ ...por(l.total, g / Math.max(1, l.gramos)), gramos: g });
 
-/** Tápers con comida, del más antiguo al más nuevo: se come primero lo que lleva más tiempo. */
+/** Tápers con comida, primero lo que caduca antes: es lo que hay que comerse ya. */
 export function enNevera(d: Datos): Lote[] {
   return d.lotes
     .filter((l) => quedan(l) >= VACIO_G)
-    .sort((a, b) => a.hecho.localeCompare(b.hecho) || a.creado.localeCompare(b.creado));
+    .sort((a, b) => a.caduca.localeCompare(b.caduca) || a.hecho.localeCompare(b.hecho) || a.creado.localeCompare(b.creado));
 }
 
-export interface Grupo { batchId: string; lotes: Lote[]; nombre: string; hecho: string }
+export interface Grupo { batchId: string; lotes: Lote[]; nombre: string; hecho: string; caduca: string }
 
-/** Tápers agrupados por cocinado (el curry con su arroz), del más antiguo al más nuevo. */
-export function grupos(d: Datos): Grupo[] {
+/** Tápers agrupados por cocinado (el curry con su arroz), primero el que caduca antes. */
+/** Con `hoy`, deja fuera lo caducado (no se planea comerlo). */
+export function grupos(d: Datos, hoy?: string): Grupo[] {
   const mapa = new Map<string, Grupo>();
-  for (const l of enNevera(d)) {
-    const g = mapa.get(l.batchId) ?? { batchId: l.batchId, lotes: [], nombre: "", hecho: l.hecho };
+  for (const l of enNevera(d).filter((x) => !hoy || x.caduca >= hoy)) {
+    const g = mapa.get(l.batchId) ?? { batchId: l.batchId, lotes: [], nombre: "", hecho: l.hecho, caduca: l.caduca };
+    if (l.caduca < g.caduca) g.caduca = l.caduca;
     g.lotes.push(l);
     mapa.set(l.batchId, g);
   }
@@ -48,14 +50,24 @@ export function grupos(d: Datos): Grupo[] {
   return [...mapa.values()];
 }
 
-/* ---------------- frescura ---------------- */
+/* ---------------- caducidad ---------------- */
 
 export type Estado = "bien" | "ya" | "tirar";
 
-/** 0–2 días: bien. 3–4: cómetelo ya. 5 o más: mejor a la basura (la regla habitual es 3–4 días en nevera). */
-export function frescura(l: { hecho: string }, hoy: string): { dias: number; estado: Estado } {
-  const dias = Math.max(0, diasEntre(l.hecho, hoy));
-  return { dias, estado: dias >= 5 ? "tirar" : dias >= 3 ? "ya" : "bien" };
+/**
+ * Cuenta atrás hasta la caducidad. `quedan` son días: 0 = caduca hoy, negativo = ya caducó.
+ * bien: 2 días o más. ya: caduca hoy o mañana (cómetelo ya). tirar: caducado.
+ * `vida` es la parte de vida que le queda (1 = recién hecho, 0 = caducado), para la barra.
+ */
+export function frescura(l: { hecho: string; caduca: string }, hoy: string): { quedan: number; estado: Estado; vida: number } {
+  const quedan = diasEntre(hoy, l.caduca);
+  const total = Math.max(1, diasEntre(l.hecho, l.caduca) + 1);
+  return { quedan, estado: quedan < 0 ? "tirar" : quedan <= 1 ? "ya" : "bien", vida: Math.max(0, Math.min(1, (quedan + 1) / total)) };
+}
+
+/** Mueve la fecha de caducidad de un táper (por ejemplo, si lo congelaste o sabes que aguanta menos). */
+export function moverCaducidad(d: Datos, loteId: string, dias: number): Datos {
+  return { ...d, lotes: d.lotes.map((l) => (l.id === loteId ? { ...l, caduca: sumarDias(l.caduca, dias) } : l)) };
 }
 
 /* ---------------- tomas previstas ---------------- */
@@ -72,7 +84,10 @@ export function primeraTomaLibre(d: Datos, ahora: Date): Toma {
   const hoy = fechaDe(ahora);
   if (minutos(horaDe(ahora)) > minutos(d.ajustes.horaCena) + 120) return { fecha: sumarDias(hoy, 1), momento: "comida" };
   let t: Toma = { fecha: hoy, momento: momentoAhora(d, ahora) };
-  const comida = (x: Toma) => d.lotes.some((l) => l.salidas.some((s) => s.destino === "comida" && s.fecha === x.fecha && s.momento === x.momento));
+  // Una toma está hecha si se sacó comida de un táper o se apuntó otra cosa en ella.
+  const comida = (x: Toma) =>
+    d.lotes.some((l) => l.salidas.some((s) => s.destino === "comida" && s.fecha === x.fecha && s.momento === x.momento)) ||
+    (d.extras[x.fecha] ?? []).some((e) => e.momento === x.momento);
   while (comida(t)) t = siguiente(t);
   return t;
 }
@@ -104,7 +119,7 @@ export const comidasQueDa = (d: Datos, g: Grupo) => comidasDeKcal(d, g.lotes.red
 export function proyectar(d: Datos, ahora: Date): { batchId: string; nombre: string; toma: Toma }[] {
   const plan: { batchId: string; nombre: string; toma: Toma }[] = [];
   let t = primeraTomaLibre(d, ahora);
-  for (const g of grupos(d)) {
+  for (const g of grupos(d, fechaDe(ahora))) {
     for (let i = 0; i < comidasQueDa(d, g); i++) { plan.push({ batchId: g.batchId, nombre: g.nombre, toma: t }); t = siguiente(t); }
   }
   return plan;
@@ -130,18 +145,18 @@ export function cocinar(d: Datos, r: Receta, raciones: number, ahora: Date): Dat
     return {
       id: nuevoId("lote"), batchId, recetaId: r.id, nombre: r.componentes.length === 1 ? r.nombre : c.nombre, tipo: c.tipo,
       total: totales(ingredientes), gramos: Math.max(1, pesoEstimado(ingredientes)), pesado: false, raciones,
-      hecho: fechaDe(ahora), creado: ahora.toISOString(), ingredientes, guardar: r.guardar, salidas: [],
+      hecho: fechaDe(ahora), caduca: sumarDias(fechaDe(ahora), c.dura ?? r.dura), creado: ahora.toISOString(), ingredientes, guardar: r.guardar, salidas: [],
     };
   });
   return { ...d, lotes: [...d.lotes, ...nuevos], propuesta: null };
 }
 
 /** Sobras o algo hecho fuera de la app: nombre, tipo, peso y macros por 100 g. */
-export function anadirAMano(d: Datos, x: { nombre: string; tipo: Tipo; gramos: number; hecho: string; n: Por100 }, ahora: Date): Datos {
+export function anadirAMano(d: Datos, x: { nombre: string; tipo: Tipo; gramos: number; hecho: string; caduca: string; n: Por100 }, ahora: Date): Datos {
   const lote: Lote = {
     id: nuevoId("lote"), batchId: nuevoId("batch"), recetaId: null, nombre: x.nombre, tipo: x.tipo,
     total: totales([{ alimentoId: "mano", nombre: x.nombre, gramos: x.gramos, n: x.n }]), gramos: x.gramos, pesado: true, raciones: 0,
-    hecho: x.hecho, creado: ahora.toISOString(), ingredientes: [], guardar: "", salidas: [],
+    hecho: x.hecho, caduca: x.caduca, creado: ahora.toISOString(), ingredientes: [], guardar: "", salidas: [],
   };
   return { ...d, lotes: [...d.lotes, lote] };
 }

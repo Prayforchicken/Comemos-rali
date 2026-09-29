@@ -18,11 +18,11 @@ import { IcoCheck, IcoCopiar } from "../componentes/Iconos";
 import { LoteDetalle, TipoMarca } from "../componentes/LoteDetalle";
 import { compartirTexto } from "../datos/respaldo";
 import { anadirExtra, apuntesDelDia, quitarExtra, totalDelDia } from "../nucleo/dia";
-import { diasEntre, fechaLarga, haceDias, horaDe, MOMENTO, pesoTexto, sumarDias } from "../nucleo/fechas";
+import { cuentaAtras, diasEntre, fechaCorta, fechaDe, fechaLarga, horaDe, MOMENTO, pesoTexto, sumarDias } from "../nucleo/fechas";
 import { anadirAMano, borrarLote, cocinar, deshacer, enNevera, frescura, momentoAhora, por100, quedan, sacar, tamanoDe, tomasDeNuevoBatch, type Toma } from "../nucleo/lotes";
 import { calcular, sugerencia } from "../nucleo/plato";
 import { candidatas, lista, loQueTengo, marcar, propuestaActual, proponer, textoCompra } from "../nucleo/propuesta";
-import { formaDe, racionDe, TIPO } from "../nucleo/receta";
+import { duraDe, formaDe, racionDe, TIPO } from "../nucleo/receta";
 import { planSemana } from "../nucleo/semana";
 import type { Lote, Momento, Tipo } from "../nucleo/tipos";
 
@@ -99,18 +99,39 @@ export function Hoy(props: PantallaProps) {
 
 /* ---------------- tu plato ---------------- */
 
+interface Otro { id: string; item: Item }
+
 function Plato({ datos, cambiar, ahora }: PantallaProps) {
   const avisar = useAvisar();
   const nevera = enNevera(datos);
   const [momento, setMomento] = useState<Momento>(() => momentoAhora(datos, ahora));
-  const [elegidos, setElegidos] = useState<string[]>(() => sugerencia(datos));
+  const [elegidos, setElegidos] = useState<string[]>(() => sugerencia(datos, fechaDe(ahora)));
+  const [otros, setOtros] = useState<Otro[]>([]);
   const [gramos, setGramos] = useState<Record<string, string>>({});
+  const [buscando, setBuscando] = useState(false);
+  const num = (id: string) => Math.max(0, Number((gramos[id] ?? "").replace(",", ".")) || 0);
   const plato = elegidos.map((id) => nevera.find((l) => l.id === id)).filter((l): l is Lote => Boolean(l))
-    .map((lote) => ({ lote, gramos: Math.max(0, Number((gramos[lote.id] ?? "").replace(",", ".")) || 0) }));
-  const { lineas } = calcular(datos, plato, momento);
-  const hayGramos = plato.some((x) => x.gramos > 0);
+    .map((lote) => ({ lote, gramos: num(lote.id) }));
+  const fuera = otros.map((o) => ({ ...o.item, gramos: num(o.id) }));
+  const { lineas } = calcular(datos, plato, momento, fuera);
+  const hayGramos = plato.some((x) => x.gramos > 0) || fuera.some((i) => i.gramos > 0);
 
   const alternar = (id: string) => setElegidos((e) => (e.includes(id) ? e.filter((x) => x !== id) : [...e, id]));
+  const anadirOtro = (item: Item) => {
+    const id = `otro-${Date.now().toString(36)}`;
+    setOtros((l) => [...l, { id, item }]);
+    setGramos((g) => ({ ...g, [id]: String(item.gramos || 100) }));
+    setBuscando(false);
+  };
+  const campo = (id: string, nombre: string) => (
+    <span className="pesada__g">
+      <input className="entrada entrada--g" id={`g-${id}`} type="text" inputMode="numeric" placeholder="0" value={gramos[id] ?? ""}
+        onChange={(e) => setGramos((g) => ({ ...g, [id]: e.target.value.replace(/[^\d.,]/g, "") }))} />
+      <span>g</span>
+      <button type="button" className="quitar" aria-label={`Quitar ${nombre} del plato`}
+        onClick={(e) => { e.preventDefault(); if (id.startsWith("otro-")) setOtros((l) => l.filter((o) => o.id !== id)); else alternar(id); }}>×</button>
+    </span>
+  );
 
   const apuntar = () => {
     let d = datos;
@@ -120,10 +141,17 @@ function Plato({ datos, cambiar, ahora }: PantallaProps) {
       d = r.datos;
       if (r.salida) hechas.push({ loteId: x.lote.id, salidaId: r.salida.id });
     }
+    const antes = new Set((d.extras[fechaDe(ahora)] ?? []).map((e) => e.id));
+    for (const i of fuera.filter((x) => x.gramos > 0)) d = anadirExtra(d, i, ahora, momento);
+    const extras = (d.extras[fechaDe(ahora)] ?? []).filter((e) => !antes.has(e.id)).map((e) => e.id);
     cambiar(() => d);
     setGramos({});
+    setOtros([]);
     const kcal = lineas.find((l) => l.clave === "kcal")!.valor;
-    avisar({ texto: `${MOMENTO[momento]} apuntada, ${kcal} kcal`, deshacer: () => cambiar((x) => hechas.reduce((y, h) => deshacer(y, h.loteId, h.salidaId), x)) });
+    avisar({
+      texto: `${MOMENTO[momento]} apuntada, ${kcal} kcal`,
+      deshacer: () => cambiar((x) => extras.reduce((y, id) => quitarExtra(y, fechaDe(ahora), id), hechas.reduce((y, h) => deshacer(y, h.loteId, h.salidaId), x))),
+    });
   };
 
   return (
@@ -138,23 +166,23 @@ function Plato({ datos, cambiar, ahora }: PantallaProps) {
         {plato.map(({ lote }) => (
           <label key={lote.id} className="pesada">
             <span className="pesada__nombre"><span><TipoMarca tipo={lote.tipo} /> {lote.nombre}</span><small>quedan {pesoTexto(quedan(lote))}</small></span>
-            <span className="pesada__g">
-              <input className="entrada entrada--g" id={`g-${lote.id}`} type="text" inputMode="numeric" placeholder="0" value={gramos[lote.id] ?? ""}
-                onChange={(e) => setGramos((g) => ({ ...g, [lote.id]: e.target.value.replace(/[^\d.,]/g, "") }))} />
-              <span>g</span>
-              <button type="button" className="quitar" aria-label={`Quitar ${lote.nombre} del plato`} onClick={(e) => { e.preventDefault(); alternar(lote.id); }}>×</button>
-            </span>
+            {campo(lote.id, lote.nombre)}
+          </label>
+        ))}
+        {otros.map((o) => (
+          <label key={o.id} className="pesada">
+            <span className="pesada__nombre"><span>{o.item.nombre}</span><small>fuera de la nevera</small></span>
+            {campo(o.id, o.item.nombre)}
           </label>
         ))}
       </div>
 
-      {nevera.some((l) => !elegidos.includes(l.id)) ? (
-        <div className="chips">
-          {nevera.filter((l) => !elegidos.includes(l.id)).map((l) => (
-            <button key={l.id} type="button" className="chip" onClick={() => alternar(l.id)}>+ <TipoMarca tipo={l.tipo} /> {l.nombre}</button>
-          ))}
-        </div>
-      ) : null}
+      <div className="chips">
+        {nevera.filter((l) => !elegidos.includes(l.id)).map((l) => (
+          <button key={l.id} type="button" className="chip" onClick={() => alternar(l.id)}>+ <TipoMarca tipo={l.tipo} /> {l.nombre}</button>
+        ))}
+        <button type="button" className="chip" onClick={() => setBuscando(true)}>+ Otra cosa</button>
+      </div>
 
       <div className="macros-plato" aria-live="polite">
         {lineas.map((l) => (
@@ -170,22 +198,35 @@ function Plato({ datos, cambiar, ahora }: PantallaProps) {
       </div>
 
       <Boton grande ancho disabled={!hayGramos} onClick={apuntar}>Apuntar {MOMENTO[momento].toLowerCase()}</Boton>
+
+      <Hoja abierta={buscando} cerrar={() => setBuscando(false)} titulo="Otra cosa">
+        <div className="chips">
+          {ATAJOS_OTRA.map((id) => BASE.find((x) => x.id === id)!).map((a) => (
+            <button key={a.id} type="button" className="chip" onClick={() => anadirOtro({ alimentoId: a.id, nombre: a.nombre, gramos: a.porcion?.gramos ?? 100, n: a.n })}>
+              + {a.nombre.replace(" con pan", "")}
+            </button>
+          ))}
+        </div>
+        <Buscador guardados={datos.alimentos} alGuardarAlimento={(a) => cambiar((d) => ({ ...d, alimentos: { ...d.alimentos, [a.id]: a } }))} alAnadir={anadirOtro} />
+      </Hoja>
     </section>
   );
 }
 
 /* ---------------- la nevera ---------------- */
 
+/** Fila de un táper: tipo, nombre, macros por 100 g, cuenta atrás hasta que caduca y lo que queda. */
 function FilaTaper({ l, hoy, abrir }: { l: Lote; hoy: string; abrir: () => void }) {
   const f = frescura(l, hoy);
   return (
-    <button type="button" className="fila-plana" onClick={abrir}>
+    <button type="button" className="fila-plana fila-taper" onClick={abrir}>
       <span className="fila-plana__txt">
         <b><TipoMarca tipo={l.tipo} /> {l.nombre}</b>
         <span className="nota">{textoPor100(por100(l))}</span>
-        <span className="nota" data-estado={f.estado}>{f.estado === "bien" ? `Hecho ${haceDias(l.hecho, hoy)}` : `${f.dias} días en la nevera`}{l.pesado ? "" : ". Peso estimado"}</span>
+        <span className="nota" data-estado={f.estado}>{cuentaAtras(l.caduca, hoy)}{f.estado === "tirar" ? ": a la basura" : f.estado === "ya" ? ": cómetelo ya" : ""}{l.pesado ? "" : ". Peso estimado"}</span>
       </span>
       <span className="fila-plana__dcha mono">{pesoTexto(quedan(l))}</span>
+      <span className="vida" data-estado={f.estado} aria-hidden="true"><i style={{ width: `${Math.round(f.vida * 100)}%` }} /></span>
     </button>
   );
 }
@@ -221,6 +262,8 @@ function Batch({ datos, cambiar, ahora, hoy, irA, abiertoAlEmpezar, cuando }: Pa
   }
 
   const tomas = tomasDeNuevoBatch(datos, r.kcal * raciones, ahora);
+  const caduca = sumarDias(hoy, duraDe(receta));
+  const pasadas = tomas.filter((t) => t.fecha > caduca);
   const lineas = lista(receta, raciones, tamanoDe(datos, receta));
   const tengo = loQueTengo(datos, hoy);
   const falta = lineas.filter((l) => !tengo.has(l.alimentoId));
@@ -249,6 +292,11 @@ function Batch({ datos, cambiar, ahora, hoy, irA, abiertoAlEmpezar, cuando }: Pa
         <Paso valor={raciones} min={1} max={8} alCambiar={setRaciones} texto={(v) => `${v} ${v === 1 ? "ración" : "raciones"}`} />
         <p>{textoTomas(tomas, hoy)}</p>
       </div>
+      <p className="nota" data-estado={pasadas.length ? "ya" : undefined}>
+        {pasadas.length
+          ? `Caduca el ${fechaCorta(caduca)}: ${pasadas.length === 1 ? "la última ración no llega" : `las ${pasadas.length} últimas raciones no llegan`}.`
+          : `Aguanta ${duraDe(receta)} días en la nevera, hasta el ${fechaCorta(caduca)}.`}
+      </p>
 
       <details className="pliegue">
         <summary><span>Ingredientes</span><span className="nota">{falta.length ? `faltan ${falta.length}` : "todo en casa"}</span></summary>
@@ -306,12 +354,13 @@ function Batch({ datos, cambiar, ahora, hoy, irA, abiertoAlEmpezar, cuando }: Pa
 
 function Sobras({ abierta, cerrar, hoy, datos, cambiar, alGuardar }: {
   abierta: boolean; cerrar: () => void; hoy: string; datos: PantallaProps["datos"]; cambiar: PantallaProps["cambiar"];
-  alGuardar: (x: { nombre: string; tipo: Tipo; gramos: number; hecho: string; n: Por100 }) => void;
+  alGuardar: (x: { nombre: string; tipo: Tipo; gramos: number; hecho: string; caduca: string; n: Por100 }) => void;
 }) {
   const vacio = { nombre: "", gramos: "", kcal: "", proteina: "", carbos: "", grasa: "" };
   const [f, setF] = useState(vacio);
   const [tipo, setTipo] = useState<Tipo>("combinado");
   const [hace, setHace] = useState(0);
+  const [dura, setDura] = useState(3);
   const [buscando, setBuscando] = useState(false);
   const n = (x: string) => Math.max(0, Number(x.replace(",", ".")) || 0);
   const v = (k: keyof typeof vacio) => (e: React.ChangeEvent<HTMLInputElement>) => setF({ ...f, [k]: e.target.value });
@@ -323,7 +372,14 @@ function Sobras({ abierta, cerrar, hoy, datos, cambiar, alGuardar }: {
         {(Object.keys(TIPO) as Tipo[]).map((t) => <button key={t} type="button" className="chip" data-activo={tipo === t} onClick={() => setTipo(t)}>{TIPO[t].nombre}</button>)}
       </div>
       <div className="chips">
-        {["Hecho hoy", "Ayer", "Anteayer"].map((t, i) => <button key={t} type="button" className="chip" data-activo={hace === i} onClick={() => setHace(i)}>{t}</button>)}
+        {["Hecho hoy", "Ayer", "Anteayer"].map((t, i) => <button key={t} type="button" className="chip" data-activo={hace === i} onClick={() => { setHace(i); setDura(Math.max(0, 3 - i)); }}>{t}</button>)}
+      </div>
+      <p className="nota">Se puede comer hasta</p>
+      <div className="chips">
+        {["hoy", "mañana", "2 días", "3 días", "5 días"].map((t, i) => {
+          const dias = [0, 1, 2, 3, 5][i];
+          return <button key={t} type="button" className="chip" data-activo={dura === dias} onClick={() => setDura(dias)}>{i > 1 ? `en ${t}` : t}</button>;
+        })}
       </div>
       <Campo etiqueta="Peso (g)"><input className="entrada" id="sobras-g" inputMode="numeric" value={f.gramos} onChange={v("gramos")} /></Campo>
       <div className="rejilla">
@@ -337,8 +393,8 @@ function Sobras({ abierta, cerrar, hoy, datos, cambiar, alGuardar }: {
           alAnadir={(i) => { setF({ nombre: f.nombre || i.nombre, gramos: f.gramos || String(i.gramos), kcal: String(i.n.kcal), proteina: String(i.n.proteina), carbos: String(i.n.carbos), grasa: String(i.n.grasa) }); setBuscando(false); }} />
       ) : <button type="button" className="boton-texto" onClick={() => setBuscando(true)}>Buscar sus valores</button>}
       <Boton ancho disabled={!valido} onClick={() => {
-        alGuardar({ nombre: f.nombre.trim(), tipo, gramos: Math.round(n(f.gramos)), hecho: sumarDias(hoy, -hace), n: { kcal: n(f.kcal), proteina: n(f.proteina), carbos: n(f.carbos), grasa: n(f.grasa), fibra: 0 } });
-        setF(vacio); setHace(0);
+        alGuardar({ nombre: f.nombre.trim(), tipo, gramos: Math.round(n(f.gramos)), hecho: sumarDias(hoy, -hace), caduca: sumarDias(hoy, dura), n: { kcal: n(f.kcal), proteina: n(f.proteina), carbos: n(f.carbos), grasa: n(f.grasa), fibra: 0 } });
+        setF(vacio); setHace(0); setDura(3);
       }}>Meter en la nevera</Boton>
     </Hoja>
   );

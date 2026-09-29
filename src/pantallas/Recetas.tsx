@@ -10,7 +10,7 @@ import { Boton, Campo, Confirmar, Hoja, Paso, useAvisar } from "../componentes/b
 import { Buscador, ListaItems } from "../componentes/Buscador";
 import { haceDias } from "../nucleo/fechas";
 import { nuevoId, tamanoDe } from "../nucleo/lotes";
-import { formaDe, racionDe, TIPO } from "../nucleo/receta";
+import { duraDe, formaDe, racionDe, TIPO } from "../nucleo/receta";
 import { apartar, lista, proponer, todasLasRecetas, ultimaVez } from "../nucleo/propuesta";
 import type { Receta } from "../nucleo/tipos";
 
@@ -37,7 +37,7 @@ export function Recetas({ datos, cambiar, hoy, irA }: PantallaProps) {
     );
   };
 
-  const nueva = (): Receta => ({ id: nuevoId("receta"), nombre: "", corto: "", componentes: [], pasos: [], minutos: 40, guardar: "3 días en la nevera.", propia: true, salen: 4 });
+  const nueva = (): Receta => ({ id: nuevoId("receta"), nombre: "", corto: "", componentes: [], pasos: [], minutos: 40, guardar: "", dura: 4, propia: true, salen: 4 });
 
   return (
     <div className="pantalla">
@@ -87,9 +87,9 @@ function DetalleReceta({ r, raciones, tamano, apartada, alProponer, alApartar, a
   const t = racionDe(r, tamano);
   return (
     <>
-      <p className="nota">{r.minutos} min. Cada ración, {t.kcal} kcal y {Math.round(t.proteina)} g de proteína.</p>
+      <p className="nota">{r.minutos} min. Cada ración, {t.kcal} kcal y {Math.round(t.proteina)} g de proteína. Aguanta {duraDe(r)} días en la nevera.</p>
       <ul className="lista-simple">
-        {r.componentes.map((c) => <li key={c.id}><span>{c.nombre}</span><span className="nota">{TIPO[c.tipo].nombre}</span></li>)}
+        {r.componentes.map((c) => <li key={c.id}><span>{c.nombre}</span><span className="nota">{TIPO[c.tipo].nombre}, {c.dura ?? r.dura} días</span></li>)}
       </ul>
       <details className="pliegue">
         <summary><span>Ingredientes</span><span className="nota">{raciones} raciones</span></summary>
@@ -151,6 +151,7 @@ function EditorReceta({ inicial, datos, alGuardar, alGuardarAlimento }: {
   const [pasos, setPasos] = useState(inicial.pasos.join("\n"));
   const [minutos, setMinutos] = useState(String(inicial.minutos));
   const [guardar, setGuardar] = useState(inicial.guardar);
+  const [dura, setDura] = useState(String(inicial.dura ?? 4));
   const todos = separado ? [...principal, ...guarnicion] : principal;
   const valido = nombre.trim() && principal.some((i) => i.gramos > 0) && (!separado || guarnicion.some((i) => i.gramos > 0));
   const racion = totales(todos.map((i) => ({ ...i, gramos: i.gramos / salen })));
@@ -171,6 +172,7 @@ function EditorReceta({ inicial, datos, alGuardar, alGuardarAlimento }: {
       <Campo etiqueta="Pasos (uno por línea)"><textarea className="entrada" id="receta-pasos" rows={5} value={pasos} onChange={(e) => setPasos(e.target.value)} /></Campo>
       <div className="rejilla">
         <Campo etiqueta="Minutos"><input className="entrada" id="receta-minutos" inputMode="numeric" value={minutos} onChange={(e) => setMinutos(e.target.value)} /></Campo>
+        <Campo etiqueta="Días en la nevera"><input className="entrada" id="receta-dura" inputMode="numeric" value={dura} onChange={(e) => setDura(e.target.value)} /></Campo>
       </div>
       <Campo etiqueta="Cómo se guarda"><input className="entrada" id="receta-guardar" value={guardar} onChange={(e) => setGuardar(e.target.value)} /></Campo>
       <p className="nota">Una ración: {racion.kcal} kcal y {Math.round(racion.proteina)} g de proteína.</p>
@@ -184,6 +186,7 @@ function EditorReceta({ inicial, datos, alGuardar, alGuardarAlimento }: {
             : [{ id: "plato", nombre: n, tipo: "combinado", ingredientes: porRacion(principal) }],
           pasos: pasos.split("\n").map((p) => p.trim()).filter(Boolean),
           minutos: Math.max(5, Number(minutos) || 40), guardar: guardar.trim(),
+          dura: Math.min(14, Math.max(1, Math.round(Number(dura) || 4))),
         });
       }}>Guardar receta</Boton>
     </>

@@ -24,6 +24,8 @@ export interface Componente {
   tipo: Tipo;
   /** Ingredientes EN CRUDO para UNA ración. */
   ingredientes: Item[];
+  /** Días que aguanta en la nevera, si no son los de la receta (el arroz aguanta menos que el curry). */
+  dura?: number;
 }
 
 export interface Receta {
@@ -38,6 +40,8 @@ export interface Receta {
   minutos: number;
   /** Cómo se guarda y se recalienta. */
   guardar: string;
+  /** Días que aguanta en la nevera desde que se cocina. */
+  dura: number;
   /** true si la ha creado Adrián (se puede editar y borrar). */
   propia?: boolean;
   /** Recetas propias: para cuántas raciones se escribieron los ingredientes. */
@@ -71,8 +75,10 @@ export interface Lote {
   pesado: boolean;
   /** Raciones para las que se cocinó (solo para calcular cuántas comidas da). */
   raciones: number;
-  /** Día en que se cocinó (YYYY-MM-DD). Marca la frescura. */
+  /** Día en que se cocinó (YYYY-MM-DD). */
   hecho: string;
+  /** Último día en que se puede comer (YYYY-MM-DD). La nevera se ordena por esto. */
+  caduca: string;
   creado: string;    // ISO
   /** Ingredientes en crudo de todo el táper, para ver qué lleva. */
   ingredientes: Item[];
@@ -81,7 +87,13 @@ export interface Lote {
 }
 
 /** Algo comido que no sale de la nevera: Plenny, un capricho, comer fuera… */
-export interface Extra { id: string; cuando: string; item: Item }
+export interface Extra {
+  id: string;
+  cuando: string;
+  item: Item;
+  /** Si se apuntó como comida o cena desde "Tu plato" (cuenta como toma hecha). */
+  momento?: Momento;
+}
 
 export interface Objetivo { kcal: number; proteina: number; carbos: number; grasa: number; fibra: number }
 

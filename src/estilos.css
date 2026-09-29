@@ -164,6 +164,7 @@ h1, h2, h3 { font-family: var(--f-titulo); text-wrap: balance; letter-spacing: -
 .semana__cocinar svg { width: 18px; height: 18px; }
 .semana__toma { display: grid; grid-template-columns: 70px 1fr; gap: 8px; color: var(--tinta-2); }
 .semana__toma[data-nevera="true"] { color: var(--tinta); }
+.semana__toma[data-caducado="true"] span:last-child { color: var(--tirar); }
 .semana__toma span:first-child { color: var(--tinta-2); font-size: 14px; }
 
 /* ---------- bloques sin caja, separados por una línea ---------- */
@@ -183,6 +184,13 @@ h1, h2, h3 { font-family: var(--f-titulo); text-wrap: balance; letter-spacing: -
 .fila-plana__botones { display: flex; gap: 6px; }
 .fila-plana__dcha { color: var(--tinta-2); font-size: 14px; text-align: right; white-space: nowrap; }
 .fila-plana .flecha { font: 700 26px/1 var(--f-titulo); color: var(--cobalto); }
+/* Cuenta atrás de un táper: barra de la vida que le queda */
+.vida { grid-column: 1 / -1; height: 3px; border-radius: 2px; background: var(--linea); overflow: hidden; }
+.vida i { display: block; height: 100%; background: var(--bien); border-radius: inherit; }
+.vida[data-estado="ya"] i { background: var(--ya); }
+.vida[data-estado="tirar"] { background: var(--tirar); }
+.fila-taper .nota[data-estado] { font-weight: 700; }
+.fila-taper .nota[data-estado="bien"] { font-weight: 400; }
 .lista-plana { display: grid; }
 .lista-plana > :last-child { border-bottom: 1px solid var(--linea); }
 

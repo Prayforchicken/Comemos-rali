@@ -18,6 +18,9 @@ export const racionDe = (r: Receta, tamano: number): Totales => por(totales(ingr
 /** "P + H" o "P.C.": cómo se guarda la receta. */
 export const formaDe = (r: Receta) => r.componentes.map((c) => TIPO[c.tipo].corto).join(" + ");
 
+/** Días que aguanta en la nevera la parte que menos aguanta (lo que marca la caducidad del batch). */
+export const duraDe = (r: Receta) => Math.min(...r.componentes.map((c) => c.dura ?? r.dura));
+
 /** Multiplica las cantidades de una lista de ingredientes. */
 export const escalar = (items: Item[], f: number): Item[] => items.map((i) => ({ ...i, gramos: Math.round(i.gramos * f * 10) / 10 }));
 

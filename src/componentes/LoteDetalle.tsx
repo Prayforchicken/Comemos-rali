@@ -1,10 +1,10 @@
 /* Hoja de un táper: lo que queda, pesarlo, sacar gramos para Rali o la basura, historial y qué lleva. */
 import { useState } from "react";
-import { fechaCorta, MOMENTO, pesoTexto } from "../nucleo/fechas";
-import { borrarLote, deshacer, macrosDe, pesarQueda, por100, quedan, sacar } from "../nucleo/lotes";
+import { cuentaAtras, diasEntre, fechaCorta, fechaDe, MOMENTO, pesoTexto } from "../nucleo/fechas";
+import { borrarLote, deshacer, frescura, macrosDe, moverCaducidad, pesarQueda, por100, quedan, sacar } from "../nucleo/lotes";
 import { TIPO } from "../nucleo/receta";
 import type { Datos, Destino, Lote, Tipo } from "../nucleo/tipos";
-import { Confirmar, Hoja } from "./base";
+import { Confirmar, Hoja, Paso } from "./base";
 
 const DESTINO: Record<Destino, string> = { comida: "comida", rali: "para Rali", basura: "a la basura" };
 
@@ -22,12 +22,19 @@ export function LoteDetalle({ lote, datos, cambiar, cerrar, ahora }: {
   if (!l) return <Hoja abierta={false} cerrar={cerrar} titulo=""><span /></Hoja>;
   const q = quedan(l);
   const n = por100(l);
+  const hoy = fechaDe(ahora);
+  const f = frescura(l, hoy);
+  const dias = diasEntre(hoy, l.caduca);
   const g = (x: string) => Math.max(0, Math.round(Number(x.replace(",", ".")) || 0));
   const salir = (destino: Destino, gramos: number) => { cambiar((d) => sacar(d, l.id, destino, gramos, ahora).datos); setSaca(""); };
 
   return (
     <Hoja abierta cerrar={() => { setPeso(""); setSaca(""); cerrar(); }} titulo={l.nombre}>
       <p className="nota"><TipoMarca tipo={l.tipo} /> {TIPO[l.tipo].nombre}. Hecho el {fechaCorta(l.hecho)}.</p>
+      <div className="ajuste">
+        <span className="nota" data-estado={f.estado}>{cuentaAtras(l.caduca, hoy)}</span>
+        <Paso valor={dias} min={-7} max={21} alCambiar={(v) => cambiar((d) => moverCaducidad(d, l.id, v - dias))} texto={() => fechaCorta(l.caduca)} />
+      </div>
       <p className="nota">100 g: {Math.round(n.kcal)} kcal, {Math.round(n.proteina)} g de proteína, {Math.round(n.carbos)} g de hidratos, {Math.round(n.grasa)} g de grasa.</p>
 
       <div className="ajuste">

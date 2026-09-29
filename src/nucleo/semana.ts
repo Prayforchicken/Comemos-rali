@@ -7,18 +7,20 @@
       (si lo último es la comida, así hay cena; si es la cena, hay comida mañana).
    ============================================================ */
 import { fechaDe, sumarDias } from "./fechas";
-import { comidasDeKcal, primeraTomaLibre, proyectar, siguiente, tamanoDe, type Toma } from "./lotes";
+import { comidasDeKcal, grupos, primeraTomaLibre, proyectar, siguiente, tamanoDe, type Toma } from "./lotes";
 import { racionDe } from "./receta";
 import { candidatas, propuestaActual } from "./propuesta";
 import type { Datos } from "./tipos";
 
-export interface Hueco { toma: Toma; nombre: string; deLaNevera: boolean }
+/** `caducado`: esa toma cae después de la fecha de caducidad de lo que hay en la nevera. */
+export interface Hueco { toma: Toma; nombre: string; deLaNevera: boolean; caducado?: boolean }
 export interface Cocinado { fecha: string; recetaId: string; nombre: string }
 
 export function planSemana(d: Datos, ahora: Date, dias = 7): { huecos: Hueco[]; cocinados: Cocinado[] } {
   const hoy = fechaDe(ahora);
   const fin = sumarDias(hoy, dias - 1);
-  const huecos: Hueco[] = proyectar(d, ahora).map((p) => ({ toma: p.toma, nombre: p.nombre, deLaNevera: true }));
+  const caduca = new Map(grupos(d, hoy).map((g) => [g.batchId, g.caduca]));
+  const huecos: Hueco[] = proyectar(d, ahora).map((p) => ({ toma: p.toma, nombre: p.nombre, deLaNevera: true, caducado: p.toma.fecha > (caduca.get(p.batchId) ?? p.toma.fecha) }));
   const cocinados: Cocinado[] = [];
 
   // Recetas en orden: la propuesta ahora y después el resto por turno.

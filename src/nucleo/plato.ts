@@ -5,7 +5,8 @@
      si sobra, cuántos sobran. Si falta proteína o hidratos, cuántos gramos
      más de qué táper lo cubrirían.
    ============================================================ */
-import type { Totales } from "../alimentos/tipos";
+import { totales } from "../alimentos/nutricion";
+import type { Item, Totales } from "../alimentos/tipos";
 import { enNevera, grupos, macrosDe, por100, quedan } from "./lotes";
 import type { Datos, Lote, Momento } from "./tipos";
 
@@ -26,14 +27,14 @@ export function objetivoToma(d: Datos, m: Momento): Record<Clave, number> {
   return { kcal: Math.round(o.kcal * f), proteina: Math.round(o.proteina * f), carbos: Math.round(o.carbos * f), grasa: Math.round(o.grasa * f) };
 }
 
-/** Qué tápers poner en el plato por defecto: lo más antiguo, y si falta, su pareja de proteína o de hidratos. */
-export function sugerencia(d: Datos): string[] {
-  const g = grupos(d)[0];
+/** Qué tápers poner en el plato por defecto: lo que caduca antes (sin lo ya caducado), y si falta, su pareja de proteína o de hidratos. */
+export function sugerencia(d: Datos, hoy: string): string[] {
+  const g = grupos(d, hoy)[0];
   if (!g) return [];
   const ids = g.lotes.map((l) => l.id);
   const tipos = new Set(g.lotes.map((l) => l.tipo));
   if (tipos.has("combinado")) return ids;
-  const otros = enNevera(d).filter((l) => !ids.includes(l.id));
+  const otros = enNevera(d).filter((l) => !ids.includes(l.id) && l.caduca >= hoy);
   if (!tipos.has("proteina")) { const p = otros.find((l) => l.tipo === "proteina" || l.tipo === "combinado"); if (p) ids.push(p.id); }
   if (!tipos.has("hidratos") && tipos.has("proteina")) { const h = otros.find((l) => l.tipo === "hidratos"); if (h) ids.push(h.id); }
   return ids;
@@ -48,11 +49,12 @@ export interface Linea {
   pista: string | null;
 }
 
-export function calcular(d: Datos, plato: { lote: Lote; gramos: number }[], m: Momento): { total: Totales; lineas: Linea[] } {
+/** `plato`: gramos de cada táper. `otros`: lo que no sale de la nevera (pizza, pan, fruta…). */
+export function calcular(d: Datos, plato: { lote: Lote; gramos: number }[], m: Momento, otros: Item[] = []): { total: Totales; lineas: Linea[] } {
   const total = plato.reduce<Totales>((s, x) => {
     const t = macrosDe(x.lote, x.gramos);
     return { gramos: s.gramos + x.gramos, kcal: s.kcal + t.kcal, proteina: s.proteina + t.proteina, carbos: s.carbos + t.carbos, grasa: s.grasa + t.grasa, fibra: s.fibra + t.fibra };
-  }, { gramos: 0, kcal: 0, proteina: 0, carbos: 0, grasa: 0, fibra: 0 });
+  }, totales(otros));
   const obj = objetivoToma(d, m);
   const lineas = MACROS.map(({ clave, nombre, unidad }): Linea => {
     const valor = Math.round(total[clave]);

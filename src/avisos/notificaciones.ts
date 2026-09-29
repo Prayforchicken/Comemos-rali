@@ -2,12 +2,14 @@
    Avisos para que no se olvide lo que hay en la nevera.
    - A la hora de comer y de cenar: qué tápers tocan (mientras quede algo).
    - El día que se acaba la nevera, a la hora de cocinar: "toca batch".
+   - El día que caduca un táper, por la mañana: "caduca hoy".
    En la APK se programan de verdad (suenan con la app cerrada).
    En la web solo mientras la app está abierta.
    ============================================================ */
 import { Capacitor } from "@capacitor/core";
 import { LocalNotifications } from "@capacitor/local-notifications";
 import { fechaDe, MOMENTO, sumarDias } from "../nucleo/fechas";
+import { enNevera } from "../nucleo/lotes";
 import { planSemana } from "../nucleo/semana";
 import type { Datos } from "../nucleo/tipos";
 
@@ -42,6 +44,12 @@ export function calcularAvisos(d: Datos, ahora = new Date()): Aviso[] {
     let cuando = aFecha(primero.fecha, d.ajustes.horaCocinar);
     if (cuando <= ahora) cuando = aFecha(sumarDias(primero.fecha, 1), d.ajustes.horaCocinar);
     avisos.push({ id: idDe(fechaDe(cuando), 3), cuando, titulo: `Toca batch: ${primero.nombre}`, texto: "Mira qué te falta en la lista de ingredientes." });
+  }
+  // Caduca hoy: un aviso por día a las 11:00 con los tápers que caducan ese día.
+  const porDia = new Map<string, string[]>();
+  for (const l of enNevera(d)) porDia.set(l.caduca, [...(porDia.get(l.caduca) ?? []), l.nombre]);
+  for (const [fecha, nombres] of porDia) {
+    avisos.push({ id: idDe(fecha, 4), cuando: aFecha(fecha, "11:00"), titulo: `Caduca hoy: ${nombres.join(", ")}`, texto: "Cómetelo hoy o tíralo." });
   }
   return avisos.filter((a) => a.cuando > ahora);
 }

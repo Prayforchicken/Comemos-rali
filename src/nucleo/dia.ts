@@ -23,7 +23,7 @@ export function apuntesDelDia(d: Datos, fecha: string): Apunte[] {
     l.salidas.filter((s) => s.destino === "comida" && s.fecha === fecha)
       .map((s) => ({ id: s.id, cuando: s.cuando, nombre: l.nombre, t: macrosDe(l, s.gramos), loteId: l.id, momento: s.momento })),
   );
-  const extras: Apunte[] = (d.extras[fecha] ?? []).map((e) => ({ id: e.id, cuando: e.cuando, nombre: e.item.nombre, t: totales([e.item]) }));
+  const extras: Apunte[] = (d.extras[fecha] ?? []).map((e) => ({ id: e.id, cuando: e.cuando, nombre: e.item.nombre, t: totales([e.item]), momento: e.momento }));
   return [...raciones, ...extras].sort((a, b) => a.cuando.localeCompare(b.cuando));
 }
 
@@ -40,9 +40,11 @@ export function gramosPorReceta(d: Datos, fecha: string): { nombre: string; gram
   return [...mapa.values()];
 }
 
-export function anadirExtra(d: Datos, item: Item, ahora: Date): Datos {
+/** Algo que no sale de un táper. Con `momento`, cuenta como esa comida o cena ya hecha. */
+export function anadirExtra(d: Datos, item: Item, ahora: Date, momento?: Momento): Datos {
   const fecha = fechaDe(ahora);
-  return { ...d, extras: { ...d.extras, [fecha]: [...(d.extras[fecha] ?? []), { id: nuevoId("extra"), cuando: ahora.toISOString(), item }] } };
+  const extra = { id: nuevoId("extra"), cuando: ahora.toISOString(), item, ...(momento ? { momento } : {}) };
+  return { ...d, extras: { ...d.extras, [fecha]: [...(d.extras[fecha] ?? []), extra] } };
 }
 
 export function quitarExtra(d: Datos, fecha: string, id: string): Datos {

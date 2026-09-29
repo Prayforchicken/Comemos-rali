@@ -5,7 +5,8 @@
        proteina + hidratos → el principal y la guarnición por separado (curry y arroz)
    - Cantidades EN CRUDO y POR RACIÓN (una ración ≈ 750–850 kcal entre todas las partes).
    - Las kcal y macros no se escriben a mano: salen de sumar los ingredientes (alimentos/base.ts).
-   - Todas aguantan bien 2–3 días en la nevera.
+   - `dura`: días que aguanta en la nevera (regla habitual: 3–4 días). Una parte puede
+     tener los suyos (el arroz, 3). La app pone con esto la fecha de caducidad de cada táper.
    Para añadir una: copia un bloque y usa ids de alimentos/base.ts sin el prefijo "base-".
    ============================================================ */
 import { alimentoBase } from "../alimentos/base";
@@ -21,7 +22,7 @@ function ing(lista: [id: string, gramos: number][]): Item[] {
   });
 }
 
-const parte = (id: string, nombre: string, tipo: Tipo, lista: [string, number][]): Componente => ({ id, nombre, tipo, ingredientes: ing(lista) });
+const parte = (id: string, nombre: string, tipo: Tipo, lista: [string, number][], dura?: number): Componente => ({ id, nombre, tipo, ingredientes: ing(lista), dura });
 
 export const RECETAS: Receta[] = [
   {
@@ -34,7 +35,7 @@ export const RECETAS: Receta[] = [
         ["garbanzos-cocidos", 180], ["cebolla", 60], ["ajo", 5], ["jengibre", 5], ["curry-polvo", 6],
         ["tomate-triturado", 120], ["leche-coco-ligera", 80], ["espinacas", 80], ["aceite-oliva", 10], ["skyr", 100],
       ]),
-      parte("arroz", "Arroz basmati", "hidratos", [["arroz-basmati", 65]]),
+      parte("arroz", "Arroz basmati", "hidratos", [["arroz-basmati", 65]], 3),
     ],
     pasos: [
       "Pon el arroz a cocer, unos 12 min. Mientras, pica la cebolla, el ajo y el jengibre.",
@@ -43,7 +44,8 @@ export const RECETAS: Receta[] = [
       "Añade los garbanzos escurridos, 5 min más, y al final las espinacas hasta que se ablanden.",
       "Fuera del fuego mezcla el skyr. Curry y arroz, cada uno en su táper.",
     ],
-    guardar: "3 días en la nevera. Recalienta hasta que humee." + ARROZ,
+    guardar: "Recalienta hasta que humee." + ARROZ,
+    dura: 4,
   },
   {
     id: "bolonesa-soja",
@@ -63,7 +65,8 @@ export const RECETAS: Receta[] = [
       "Cuece la pasta 1 min menos de lo que diga el paquete y mézclala con la salsa y el queso.",
       "Todo en un táper.",
     ],
-    guardar: "3 días en la nevera. Si se seca, un chorrito de agua al recalentar.",
+    guardar: "Si se seca, un chorrito de agua al recalentar.",
+    dura: 4,
   },
   {
     id: "lentejas-estofadas",
@@ -83,7 +86,8 @@ export const RECETAS: Receta[] = [
       "Cuece 35–40 min a fuego suave hasta que estén tiernas.",
       "Todo en un táper.",
     ],
-    guardar: "3 días en la nevera. Si espesan, añade un chorrito de agua al recalentar.",
+    guardar: "Si espesan, añade un chorrito de agua al recalentar.",
+    dura: 4,
   },
   {
     id: "chili-sin-carne",
@@ -95,7 +99,7 @@ export const RECETAS: Receta[] = [
         ["alubias-rojas-cocidas", 150], ["soja-texturizada", 35], ["cebolla", 50], ["pimiento-rojo", 60], ["ajo", 5],
         ["tomate-triturado", 150], ["maiz", 50], ["comino", 2], ["pimenton", 2], ["aceite-oliva", 10],
       ]),
-      parte("arroz", "Arroz blanco", "hidratos", [["arroz", 70]]),
+      parte("arroz", "Arroz blanco", "hidratos", [["arroz", 70]], 3),
     ],
     pasos: [
       "Hidrata la soja 10 min en agua caliente y escúrrela. Pon el arroz a cocer.",
@@ -104,7 +108,8 @@ export const RECETAS: Receta[] = [
       "Echa el tomate, las alubias escurridas y el maíz. 15 min a fuego suave.",
       "Chili y arroz, cada uno en su táper.",
     ],
-    guardar: "3 días en la nevera; al segundo día está más rico." + ARROZ,
+    guardar: "Al segundo día está más rico." + ARROZ,
+    dura: 4,
   },
   {
     id: "tofu-teriyaki",
@@ -116,7 +121,7 @@ export const RECETAS: Receta[] = [
         ["tofu-firme", 200], ["maicena", 8], ["aceite-oliva", 12], ["salsa-soja", 20], ["miel", 12],
         ["ajo", 5], ["jengibre", 5], ["brocoli", 150], ["sesamo", 5],
       ]),
-      parte("arroz", "Arroz blanco", "hidratos", [["arroz", 75]]),
+      parte("arroz", "Arroz blanco", "hidratos", [["arroz", 75]], 3),
     ],
     pasos: [
       "Pon el arroz a cocer. Seca el tofu con papel, córtalo en dados y rebózalo en la maicena.",
@@ -125,7 +130,8 @@ export const RECETAS: Receta[] = [
       "Salsa: soja, miel, ajo y jengibre rallados y un chorrito de agua. Redúcela 2 min en la sartén y mézclala con el tofu y el brócoli.",
       "Sésamo por encima. Tofu y arroz, cada uno en su táper.",
     ],
-    guardar: "2–3 días en la nevera. El tofu pierde crujiente: 3 min de air fryer lo arreglan." + ARROZ,
+    guardar: "El tofu pierde crujiente: 3 min de air fryer lo arreglan." + ARROZ,
+    dura: 3,
   },
   {
     id: "dal-lentejas-rojas",
@@ -137,7 +143,7 @@ export const RECETAS: Receta[] = [
         ["lentejas-rojas", 85], ["cebolla", 50], ["ajo", 5], ["jengibre", 5], ["curry-polvo", 4], ["comino", 1],
         ["tomate-triturado", 100], ["leche-coco-ligera", 60], ["espinacas", 60], ["aceite-oliva", 8], ["skyr", 100],
       ]),
-      parte("arroz", "Arroz basmati", "hidratos", [["arroz-basmati", 60]]),
+      parte("arroz", "Arroz basmati", "hidratos", [["arroz-basmati", 60]], 3),
     ],
     pasos: [
       "Pon el arroz a cocer. Sofríe cebolla, ajo y jengibre picados en el aceite 5 min.",
@@ -146,7 +152,8 @@ export const RECETAS: Receta[] = [
       "Añade la leche de coco y las espinacas, 3 min más. Fuera del fuego, el skyr.",
       "Dal y arroz, cada uno en su táper.",
     ],
-    guardar: "3 días en la nevera. Espesa al enfriar: añade agua al recalentar." + ARROZ,
+    guardar: "Espesa al enfriar: añade agua al recalentar." + ARROZ,
+    dura: 4,
   },
   {
     id: "arroz-frito",
@@ -166,7 +173,8 @@ export const RECETAS: Receta[] = [
       "Haz un revuelto con los huevos a un lado. Junta todo con el arroz y la soja, 3 min a fuego fuerte.",
       "Sésamo por encima y al táper en cuanto se temple.",
     ],
-    guardar: "2 días en la nevera. Recalienta hasta que humee." + ARROZ,
+    guardar: "Recalienta hasta que humee." + ARROZ,
+    dura: 3,
   },
   {
     id: "seitan-cuscus",
@@ -178,7 +186,7 @@ export const RECETAS: Receta[] = [
         ["seitan", 150], ["calabacin", 120], ["pimiento-rojo", 80], ["cebolla", 50], ["ajo", 5],
         ["aceite-oliva", 14], ["pimenton", 2], ["comino", 1],
       ]),
-      parte("cuscus", "Cuscús", "hidratos", [["cuscus", 80]]),
+      parte("cuscus", "Cuscús", "hidratos", [["cuscus", 80]], 3),
     ],
     pasos: [
       "Horno a 220 °C. Calabacín, pimiento y cebolla en trozos con la mitad del aceite, sal y pimentón: 25 min.",
@@ -186,6 +194,7 @@ export const RECETAS: Receta[] = [
       "Cuscús: el mismo peso de agua hirviendo con sal, tapa 5 min y suéltalo con un tenedor.",
       "Seitán y cuscús, cada uno en su táper.",
     ],
-    guardar: "3 días en la nevera.",
+    guardar: "Recalienta el seitán en la sartén para que no se ablande.",
+    dura: 4,
   },
 ];

@@ -16,7 +16,10 @@ export function Semana({ datos, ahora, hoy }: PantallaProps) {
   const hueco = (fecha: string, m: Momento) => huecos.find((h) => h.toma.fecha === fecha && h.toma.momento === m);
   const proxima = cocinados[0];
   /** Lo que ya se comió en una toma (para las de hoy que han pasado). */
-  const comido = (fecha: string, m: Momento) => [...new Set(datos.lotes.filter((l) => l.salidas.some((s) => s.destino === "comida" && s.fecha === fecha && s.momento === m)).map((l) => l.nombre))].join(" + ");
+  const comido = (fecha: string, m: Momento) => [...new Set([
+    ...datos.lotes.filter((l) => l.salidas.some((s) => s.destino === "comida" && s.fecha === fecha && s.momento === m)).map((l) => l.nombre),
+    ...(datos.extras[fecha] ?? []).filter((e) => e.momento === m).map((e) => e.item.nombre),
+  ])].join(" + ");
 
   return (
     <div className="pantalla">
@@ -34,9 +37,9 @@ export function Semana({ datos, ahora, hoy }: PantallaProps) {
                 const h = hueco(f, m);
                 const hecho = h ? "" : comido(f, m);
                 return (
-                  <p key={m} className="semana__toma" data-nevera={h ? h.deLaNevera : Boolean(hecho)}>
+                  <p key={m} className="semana__toma" data-nevera={h ? h.deLaNevera : Boolean(hecho)} data-caducado={h?.caducado ?? false}>
                     <span>{m === "comida" ? "Comida" : "Cena"}</span>
-                    <span>{h ? h.nombre : hecho ? `${hecho} (comido)` : "—"}</span>
+                    <span>{h ? `${h.nombre}${h.caducado ? " (ya habrá caducado)" : ""}` : hecho ? `${hecho} (comido)` : "—"}</span>
                   </p>
                 );
               })}

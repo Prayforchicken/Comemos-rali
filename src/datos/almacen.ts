@@ -5,6 +5,7 @@
    ============================================================ */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { por, vacio } from "../alimentos/nutricion";
+import { sumarDias } from "../nucleo/fechas";
 import type { Totales } from "../alimentos/tipos";
 import type { Ajustes, Datos, Lote, Receta } from "../nucleo/tipos";
 
@@ -36,8 +37,10 @@ type Suelto = any;
 
 function migrarLote(x: Suelto): Lote {
   const salidas = (x.salidas ?? []) as Suelto[];
+  // Sin fecha de caducidad (copias anteriores): 4 días desde que se hizo.
+  const caduca = typeof x.caduca === "string" ? x.caduca : sumarDias(x.hecho, 4);
   if (x.total && typeof x.gramos === "number") {
-    return { batchId: x.id, tipo: "combinado", pesado: true, raciones: 0, ingredientes: [], guardar: "", ...x, salidas: salidas.map((s) => ({ gramos: 0, ...s })) };
+    return { batchId: x.id, tipo: "combinado", pesado: true, raciones: 0, ingredientes: [], guardar: "", ...x, caduca, salidas: salidas.map((s) => ({ gramos: 0, ...s })) };
   }
   const porRacion: Totales = { ...vacio, ...(x.porRacion ?? {}) };
   const raciones = Math.max(1, Number(x.raciones) || 1);
@@ -45,14 +48,15 @@ function migrarLote(x: Suelto): Lote {
   return {
     id: x.id, batchId: x.id, recetaId: x.recetaId ?? null, nombre: x.nombre ?? "Táper", tipo: "combinado",
     total: { ...por(porRacion, raciones), gramos: gRacion * raciones }, gramos: gRacion * raciones, pesado: false, raciones,
-    hecho: x.hecho, creado: x.creado ?? new Date().toISOString(), ingredientes: [], guardar: x.guardar ?? "",
+    hecho: x.hecho, caduca, creado: x.creado ?? new Date().toISOString(), ingredientes: [], guardar: x.guardar ?? "",
     salidas: salidas.map((s) => ({ ...s, gramos: typeof s.gramos === "number" ? s.gramos : gRacion })),
   };
 }
 
 function migrarReceta(r: Suelto): Receta {
-  if (Array.isArray(r.componentes)) return r as Receta;
-  return { ...r, componentes: [{ id: "c1", nombre: r.nombre, tipo: "combinado", ingredientes: r.ingredientes ?? [] }] } as Receta;
+  const dura = typeof r.dura === "number" ? r.dura : 4;
+  if (Array.isArray(r.componentes)) return { ...r, dura } as Receta;
+  return { ...r, dura, componentes: [{ id: "c1", nombre: r.nombre, tipo: "combinado", ingredientes: r.ingredientes ?? [] }] } as Receta;
 }
 
 /** Completa con valores de inicio lo que falte (copias antiguas o a medias). */

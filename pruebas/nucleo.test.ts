@@ -5,7 +5,8 @@ import { alimentoBase } from "../src/alimentos/base";
 import { datosIniciales, normalizar } from "../src/datos/almacen";
 import { resumen } from "../src/nucleo/cuentas";
 import { anadirExtra, gramosPorReceta, totalDelDia } from "../src/nucleo/dia";
-import { anadirAMano, cocinar, enNevera, frescura, macrosDe, pesarQueda, por100, primeraTomaLibre, proyectar, quedan, sacar, tamanoDe } from "../src/nucleo/lotes";
+import { anadirAMano, cocinar, enNevera, frescura, macrosDe, moverCaducidad, pesarQueda, por100, primeraTomaLibre, proyectar, quedan, sacar, tamanoDe } from "../src/nucleo/lotes";
+import { cuentaAtras } from "../src/nucleo/fechas";
 import { calcular, objetivoToma, sugerencia } from "../src/nucleo/plato";
 import { candidatas, enUnidades, lista, otraIdea, propuestaActual } from "../src/nucleo/propuesta";
 import { planSemana } from "../src/nucleo/semana";
@@ -57,7 +58,8 @@ test("solo cuentan calorías los gramos que te comes, y se guardan por receta", 
 test("el plato: falta en rojo, sobra en blanco y una pista de gramos", () => {
   const d = cocinar(datosIniciales(), curry, 4, hora("2026-09-29T19:30:00"));
   const [p, h] = d.lotes;
-  assert.deepEqual(sugerencia(d), [p.id, h.id]);
+  assert.deepEqual(sugerencia(d, "2026-09-29"), [h.id, p.id]); // el arroz caduca antes
+  assert.deepEqual(sugerencia(d, "2026-10-03"), [p.id]); // el arroz ya caducó: no se sugiere
   const poco = calcular(d, [{ lote: p, gramos: 150 }, { lote: h, gramos: 100 }], "cena");
   const prot = poco.lineas.find((l) => l.clave === "proteina")!;
   assert.equal(prot.estado, "falta");
@@ -90,7 +92,7 @@ test("el plan de la semana dice cuándo volver a cocinar", () => {
 });
 
 test("sobras a mano y propuesta que no repite lo que hay en la nevera", () => {
-  let d = anadirAMano(datosIniciales(), { nombre: "Paella", tipo: "combinado", gramos: 500, hecho: "2026-09-28", n: { kcal: 150, proteina: 5, carbos: 20, grasa: 5, fibra: 1 } }, hora("2026-09-29T10:00:00"));
+  let d = anadirAMano(datosIniciales(), { nombre: "Paella", tipo: "combinado", gramos: 500, hecho: "2026-09-28", caduca: "2026-10-01", n: { kcal: 150, proteina: 5, carbos: 20, grasa: 5, fibra: 1 } }, hora("2026-09-29T10:00:00"));
   assert.equal(Math.round(macrosDe(d.lotes[0], 100).kcal), 150);
   d = cocinar(d, RECETAS[0], 4, hora("2026-09-29T19:00:00"));
   assert.equal(enNevera(d)[0].nombre, "Paella");
@@ -98,10 +100,43 @@ test("sobras a mano y propuesta que no repite lo que hay en la nevera", () => {
   assert.notEqual(propuestaActual(otraIdea(d))?.id, propuestaActual(d)?.id);
 });
 
-test("frescura: 3 días avisa, 5 días a la basura", () => {
-  assert.equal(frescura({ hecho: "2026-09-29" }, "2026-10-01").estado, "bien");
-  assert.equal(frescura({ hecho: "2026-09-29" }, "2026-10-02").estado, "ya");
-  assert.equal(frescura({ hecho: "2026-09-29" }, "2026-10-04").estado, "tirar");
+test("caducidad: cada parte con sus días y cuenta atrás", () => {
+  const d = cocinar(datosIniciales(), curry, 4, hora("2026-09-29T19:30:00"));
+  const [p, h] = d.lotes;
+  assert.deepEqual([p.caduca, h.caduca], ["2026-10-03", "2026-10-02"]); // curry 4 días, arroz 3
+  assert.equal(cuentaAtras(h.caduca, "2026-09-30"), "Caduca en 2 días");
+  assert.equal(cuentaAtras(h.caduca, "2026-10-01"), "Caduca mañana");
+  assert.equal(cuentaAtras(h.caduca, "2026-10-02"), "Caduca hoy");
+  assert.equal(cuentaAtras(h.caduca, "2026-10-04"), "Caducó hace 2 días");
+  assert.deepEqual(["2026-09-30", "2026-10-01", "2026-10-03"].map((x) => frescura(h, x).estado), ["bien", "ya", "tirar"]);
+  assert.equal(frescura(h, "2026-09-29").vida, 1);
+});
+
+test("la nevera va por caducidad: lo que caduca antes, primero", () => {
+  let d = cocinar(datosIniciales(), curry, 4, hora("2026-09-29T19:30:00"));
+  // Unas sobras de hoy que solo aguantan hasta mañana pasan delante del curry de ayer.
+  d = anadirAMano(d, { nombre: "Pizza", tipo: "combinado", gramos: 300, hecho: "2026-09-30", caduca: "2026-10-01", n: { kcal: 250, proteina: 11, carbos: 30, grasa: 9, fibra: 2 } }, hora("2026-09-30T10:00:00"));
+  assert.deepEqual(enNevera(d).map((l) => l.nombre), ["Pizza", "Arroz basmati", "Curry de garbanzos"]);
+  assert.equal(proyectar(d, hora("2026-09-30T10:00:00"))[0].nombre, "Pizza");
+  // Si alargas la fecha de la pizza, vuelve a ir detrás.
+  d = moverCaducidad(d, enNevera(d)[0].id, 3);
+  assert.equal(enNevera(d)[2].nombre, "Pizza");
+  // En la semana, lo que se comería pasada su fecha sale marcado.
+  const plan = planSemana(cocinar(datosIniciales(), curry, 8, hora("2026-09-29T19:30:00")), hora("2026-09-29T19:31:00"));
+  assert.ok(plan.huecos.some((x) => x.caducado));
+});
+
+test("comer otra cosa en lugar del táper cuenta y deja la toma hecha", () => {
+  let d = cocinar(datosIniciales(), bolonesa, 4, hora("2026-09-29T13:00:00"));
+  const pizza = { alimentoId: "x-pizza", nombre: "Pizza", gramos: 300, n: { kcal: 250, proteina: 11, carbos: 30, grasa: 9, fibra: 2 } };
+  const { lineas } = calcular(d, [{ lote: d.lotes[0], gramos: 0 }], "comida", [pizza]);
+  assert.equal(lineas[0].valor, 750);
+  const ahora = hora("2026-09-29T14:40:00");
+  assert.equal(primeraTomaLibre(d, ahora).momento, "comida");
+  d = anadirExtra(d, pizza, ahora, "comida");
+  assert.deepEqual(primeraTomaLibre(d, ahora), { fecha: "2026-09-29", momento: "cena" });
+  assert.equal(Math.round(totalDelDia(d, "2026-09-29").kcal), 750);
+  assert.equal(quedan(d.lotes[0]), d.lotes[0].gramos); // el táper sigue entero
 });
 
 test("las copias con raciones (versión 1) se pasan a gramos", () => {
