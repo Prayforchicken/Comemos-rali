@@ -58,6 +58,9 @@ export function haceDias(f: string, hoy: string) {
 
 export const MOMENTO: Record<Momento, string> = { comida: "Comida", cena: "Cena" };
 
+/** "850 g" o "1,8 kg". */
+export const pesoTexto = (g: number) => (g < 1000 ? `${Math.round(g)} g` : `${(g / 1000).toLocaleString("es-ES", { maximumFractionDigits: 1 })} kg`);
+
 /** A qué toma pertenece una hora: hasta la mitad entre comida y cena es comida; luego, cena. */
 export function momentoDe(hhmm: string, horaComida: string, horaCena: string): Momento {
   const corte = (minutos(horaComida) + minutos(horaCena)) / 2;

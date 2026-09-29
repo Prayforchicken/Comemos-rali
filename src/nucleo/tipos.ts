@@ -1,25 +1,38 @@
 /* ============================================================
    Tipos de datos de la app. Todo lo que se guarda en el móvil está aquí.
 
-   La idea en una frase: la app propone un batch para 2 días; al decir
-   "lo hago" se convierte en un LOTE en la nevera, y cada RACIÓN de ese
-   lote termina en uno de tres sitios: comida (cuenta calorías), Rali o basura.
+   La idea en una frase: la app propone un batch; al decir "lo hago" cada
+   parte de la receta se convierte en un TÁPER (Lote) con su peso en gramos
+   y sus macros. Al comer se pesan los gramos que se sacan de cada táper;
+   cada salida va a comida (cuenta calorías), a Rali o a la basura.
    ============================================================ */
 import type { Alimento, Item, Totales } from "../alimentos/tipos";
 
 /** Las dos tomas que cubre el batch. El desayuno y la merienda van aparte (extras). */
 export type Momento = "comida" | "cena";
 
-/** A dónde va cada ración. */
+/** A dónde va lo que sale de un táper. */
 export type Destino = "comida" | "rali" | "basura";
+
+/** Qué es cada parte: guarnición de hidratos, plato de proteína o plato combinado. */
+export type Tipo = "hidratos" | "proteina" | "combinado";
+
+/** Una parte de una receta que se guarda en su propio táper (el curry, el arroz). */
+export interface Componente {
+  id: string;
+  nombre: string;
+  tipo: Tipo;
+  /** Ingredientes EN CRUDO para UNA ración. */
+  ingredientes: Item[];
+}
 
 export interface Receta {
   id: string;
   nombre: string;
   /** Nombre corto para avisos y listas. */
   corto: string;
-  /** Ingredientes de UNA ración (se multiplican por raciones y tamaño). */
-  ingredientes: Item[];
+  /** Una parte (plato combinado) o dos (principal de proteína + guarnición de hidratos). */
+  componentes: Componente[];
   pasos: string[];
   /** Minutos aproximados para 4 raciones. */
   minutos: number;
@@ -27,32 +40,41 @@ export interface Receta {
   guardar: string;
   /** true si la ha creado Adrián (se puede editar y borrar). */
   propia?: boolean;
-  /** Recetas propias: para cuántas raciones se escribieron los ingredientes (para volver a editarlas igual). */
+  /** Recetas propias: para cuántas raciones se escribieron los ingredientes. */
   salen?: number;
 }
 
-/** Una ración que ha salido de la nevera. */
+/** Gramos que han salido de un táper. */
 export interface Salida {
   id: string;
   destino: Destino;
+  gramos: number;
   cuando: string;    // ISO con hora
   fecha: string;     // YYYY-MM-DD
   momento: Momento;
 }
 
-/** Lo que hay cocinado en la nevera. */
+/** Un táper en la nevera. */
 export interface Lote {
   id: string;
-  /** Receta de la app o propia. null si se añadió a mano ("ya tengo algo hecho"). */
+  /** Tápers cocinados a la vez (el curry y su arroz) comparten batchId. */
+  batchId: string;
+  /** Receta de la app o propia. null si se añadió a mano (sobras). */
   recetaId: string | null;
   nombre: string;
-  /** Kcal y macros de UNA ración, copiados al cocinar (editar la receta después no cambia el historial). */
-  porRacion: Totales;
+  tipo: Tipo;
+  /** Kcal y macros de TODO lo cocinado. Los macros por 100 g salen de dividir entre `gramos`. */
+  total: Totales;
+  /** Peso de la comida hecha (sin el recipiente). */
+  gramos: number;
+  /** false mientras el peso sea una estimación de la app. */
+  pesado: boolean;
+  /** Raciones para las que se cocinó (solo para calcular cuántas comidas da). */
   raciones: number;
   /** Día en que se cocinó (YYYY-MM-DD). Marca la frescura. */
   hecho: string;
   creado: string;    // ISO
-  /** Copia de los ingredientes de una ración, para ver qué lleva. */
+  /** Ingredientes en crudo de todo el táper, para ver qué lleva. */
   ingredientes: Item[];
   guardar: string;
   salidas: Salida[];
@@ -65,10 +87,10 @@ export interface Objetivo { kcal: number; proteina: number; carbos: number; gras
 
 export interface Ajustes {
   objetivo: Objetivo;
+  /** Parte del objetivo diario que toca en cada toma del batch (0–1). El resto, desayuno y merienda. */
+  reparto: Record<Momento, number>;
   /** Raciones que propone cocinar cada vez (2 días × comida y cena = 4). */
   raciones: number;
-  /** Tamaño de cada ración en %. 100 = la receta tal cual. */
-  tamano: number;
   horaComida: string;   // "14:40"
   horaCena: string;     // "20:15"
   /** Hora del aviso "toca batch" el día que se acaba la nevera. */
@@ -77,7 +99,7 @@ export interface Ajustes {
 }
 
 export interface Datos {
-  version: 1;
+  version: 2;
   lotes: Lote[];
   recetasPropias: Record<string, Receta>;
   /** Recetas que no quiere que le proponga. */

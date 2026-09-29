@@ -6,6 +6,7 @@
 import type { Unidad } from "../alimentos/tipos";
 import { RECETAS } from "../recetas/recetas";
 import { enNevera } from "./lotes";
+import { ingredientesDe } from "./receta";
 import type { Datos, Receta } from "./tipos";
 
 export const todasLasRecetas = (d: Datos): Receta[] => [...RECETAS, ...Object.values(d.recetasPropias)];
@@ -69,10 +70,14 @@ export function enUnidades(gramos: number, u: Unidad | undefined): string | null
 /** Ingredientes para `raciones` raciones al tamaño elegido, en el orden de la receta. */
 export function lista(r: Receta, raciones: number, tamano: number): Linea[] {
   const f = raciones * (tamano / 100);
-  return r.ingredientes.map((i) => {
-    const gramos = redondeoGramos(i.gramos * f);
-    return { alimentoId: i.alimentoId, nombre: i.nombre, gramos, aprox: enUnidades(i.gramos * f, i.unidad) };
-  });
+  // Si un ingrediente sale en varias partes (el ajo del curry y el del arroz), se suma una vez.
+  const juntos = new Map<string, { nombre: string; gramos: number; unidad?: Unidad }>();
+  for (const i of ingredientesDe(r)) {
+    const x = juntos.get(i.alimentoId) ?? { nombre: i.nombre, gramos: 0, unidad: i.unidad };
+    x.gramos += i.gramos * f;
+    juntos.set(i.alimentoId, x);
+  }
+  return [...juntos].map(([alimentoId, x]) => ({ alimentoId, nombre: x.nombre, gramos: redondeoGramos(x.gramos), aprox: enUnidades(x.gramos, x.unidad) }));
 }
 
 /** Texto para copiar y pegar en las notas o en WhatsApp. */

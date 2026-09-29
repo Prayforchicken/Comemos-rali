@@ -17,3 +17,4 @@ export const IcoCheck = () => <Svg><path d="M5 12.5l4.5 4.5L19 7.5" /></Svg>;
 export const IcoOtra = () => <Svg><path d="M20 11a8 8 0 0 0-14.3-4.9L4 8M4 3v5h5M4 13a8 8 0 0 0 14.3 4.9L20 16M20 21v-5h-5" /></Svg>;
 export const IcoCopiar = () => <Svg><rect x="8" y="8" width="12" height="12" rx="2" /><path d="M16 8V5.5A1.5 1.5 0 0 0 14.5 4h-9A1.5 1.5 0 0 0 4 5.5v9A1.5 1.5 0 0 0 5.5 16H8" /></Svg>;
 export const IcoOlla = () => <Svg><path d="M4 10h16v6a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4zM2 10h2M20 10h2M9 6c0-1.5 1-1.5 1-3M13 6c0-1.5 1-1.5 1-3" /></Svg>;
+export const IcoSemana = () => <Svg><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 10h18M8 3v4M16 3v4M7 14h2M11 14h2M15 14h2M7 17h2M11 17h2" /></Svg>;

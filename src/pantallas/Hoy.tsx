@@ -1,31 +1,34 @@
 /* ============================================================
    Hoy. De arriba abajo:
    1. La fecha y las kcal del día.
-   2. El táper que toca (la única tarjeta de la pantalla) y los demás tápers.
-   3. Qué cocinar: se abre solo cuando la nevera está vacía.
-   4. Lo comido hoy, con los añadidos rápidos.
-   Principio de diseño: una sola cosa destacada por pantalla, texto corto
-   y escrito como frase, y lo largo (ingredientes, pasos) plegado.
+   2. Tu plato: eliges tápers, escribes los gramos de la báscula y ves los macros
+      frente a lo que toca en esta toma (en rojo lo que falta). Es la única tarjeta.
+   3. La nevera: cada táper con su tipo (P, H o P.C.), lo que queda y sus macros por 100 g.
+   4. Qué cocinar después y cuándo; se abre solo cuando la nevera está vacía.
+   5. Lo comido hoy, con los añadidos rápidos.
    ============================================================ */
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { PantallaProps } from "../App";
 import { alimentoBase, ATAJOS_OTRA, BASE } from "../alimentos/base";
-import type { Item } from "../alimentos/tipos";
+import type { Item, Por100 } from "../alimentos/tipos";
 import { esNativo, pedirPermiso, tienePermiso } from "../avisos/notificaciones";
 import { Boton, Campo, Hoja, Medidor, Paso, useAvisar } from "../componentes/base";
 import { Buscador, ListaItems } from "../componentes/Buscador";
-import { IcoBasura, IcoCheck, IcoComer, IcoCopiar, IcoRali } from "../componentes/Iconos";
-import { LoteDetalle } from "../componentes/LoteDetalle";
+import { IcoCheck, IcoCopiar } from "../componentes/Iconos";
+import { LoteDetalle, TipoMarca } from "../componentes/LoteDetalle";
 import { compartirTexto } from "../datos/respaldo";
 import { anadirExtra, apuntesDelDia, quitarExtra, totalDelDia } from "../nucleo/dia";
-import { diasEntre, fechaLarga, haceDias, horaDe, MOMENTO, sumarDias } from "../nucleo/fechas";
-import { anadirAMano, borrarLote, cocinar, deshacer, enNevera, frescura, proyectar, quedan, racionDe, sacar, tomasDeNuevoBatch, type Toma } from "../nucleo/lotes";
+import { diasEntre, fechaLarga, haceDias, horaDe, MOMENTO, pesoTexto, sumarDias } from "../nucleo/fechas";
+import { anadirAMano, borrarLote, cocinar, deshacer, enNevera, frescura, momentoAhora, por100, quedan, sacar, tamanoDe, tomasDeNuevoBatch, type Toma } from "../nucleo/lotes";
+import { calcular, sugerencia } from "../nucleo/plato";
 import { candidatas, lista, loQueTengo, marcar, propuestaActual, proponer, textoCompra } from "../nucleo/propuesta";
-import type { Destino, Lote } from "../nucleo/tipos";
+import { formaDe, racionDe, TIPO } from "../nucleo/receta";
+import { planSemana } from "../nucleo/semana";
+import type { Lote, Momento, Tipo } from "../nucleo/tipos";
 
 /* ---------------- ayudas de texto ---------------- */
 
-function diaNombre(f: string, hoy: string) {
+export function diaNombre(f: string, hoy: string) {
   const d = diasEntre(hoy, f);
   if (d === 0) return "hoy";
   if (d === 1) return "mañana";
@@ -40,41 +43,29 @@ export function textoTomas(tomas: Toma[], hoy: string) {
   return frase ? `${frase[0].toUpperCase()}${frase.slice(1)}.` : "";
 }
 
-const HECHO = { comida: "apuntada", rali: "Una ración para Rali", basura: "Una ración a la basura" } as const;
+/** "100 g: 110 kcal, 6 P, 13 HC, 4 G" */
+export const textoPor100 = (n: Por100) => `100 g: ${Math.round(n.kcal)} kcal, ${Math.round(n.proteina)} P, ${Math.round(n.carbos)} HC, ${Math.round(n.grasa)} G`;
 
 /* ---------------- pantalla ---------------- */
 
 export function Hoy(props: PantallaProps) {
   const { datos, cambiar, ahora, hoy } = props;
-  const avisar = useAvisar();
   const [detalle, setDetalle] = useState<Lote | null>(null);
   const [permiso, setPermiso] = useState(true);
   const nevera = enNevera(datos);
-  const plan = proyectar(datos, ahora);
-  const quedanTotal = plan.length;
   const total = totalDelDia(datos, hoy);
   const objetivo = datos.ajustes.objetivo.kcal;
+  const { cocinados } = useMemo(() => planSemana(datos, ahora), [datos, ahora]);
+  const proxima = cocinados[0];
 
   useEffect(() => { if (esNativo() && datos.ajustes.avisos) void tienePermiso().then(setPermiso); }, [datos.ajustes.avisos]);
-
-  const sacarRacion = (l: Lote, destino: Destino) => {
-    const r = sacar(datos, l.id, destino, ahora);
-    if (!r.salida) return;
-    const salida = r.salida;
-    cambiar(() => r.datos);
-    const ultima = quedan(l) === 1 ? ". Era la última" : "";
-    avisar({
-      texto: destino === "comida" ? `${MOMENTO[salida.momento]} ${HECHO.comida}, ${l.porRacion.kcal} kcal${ultima}` : `${HECHO[destino]}${ultima}`,
-      deshacer: () => cambiar((d) => deshacer(d, l.id, salida.id)),
-    });
-  };
 
   return (
     <div className="hoy">
       <header className="cabecera">
         <span className="fecha">{fechaLarga(hoy)}</span>
         <a className="cabecera__kcal" href="#comido">
-          <span><b>{total.kcal}</b> de {objetivo} kcal</span>
+          <span><b>{Math.round(total.kcal)}</b> de {objetivo} kcal</span>
           <Medidor valor={total.kcal} max={objetivo} />
         </a>
       </header>
@@ -86,14 +77,18 @@ export function Hoy(props: PantallaProps) {
         </p>
       ) : null}
 
-      {nevera.map((l, i) => {
-        const tomas = plan.filter((p) => p.loteId === l.id).map((p) => p.toma);
-        return i === 0
-          ? <Taper key={l.id} l={l} tomas={tomas} hoy={hoy} sacar={sacarRacion} verDetalle={() => setDetalle(l)} />
-          : <OtroTaper key={l.id} l={l} hoy={hoy} sacar={sacarRacion} verDetalle={() => setDetalle(l)} />;
-      })}
+      {nevera.length ? <Plato key={nevera.map((l) => l.id).join()} {...props} /> : null}
 
-      <Batch key={quedanTotal === 0 ? "toca" : "siguiente"} {...props} abiertoAlEmpezar={quedanTotal === 0} />
+      {nevera.length ? (
+        <section className="bloque" aria-label="Nevera">
+          <h2 className="bloque__titulo bloque__titulo--peque">En la nevera</h2>
+          <div className="lista-plana">
+            {nevera.map((l) => <FilaTaper key={l.id} l={l} hoy={hoy} abrir={() => setDetalle(l)} />)}
+          </div>
+        </section>
+      ) : null}
+
+      <Batch key={nevera.length ? "siguiente" : "toca"} {...props} abiertoAlEmpezar={!nevera.length} cuando={proxima && nevera.length ? diaNombre(proxima.fecha, hoy) : null} />
 
       <Comido {...props} />
 
@@ -102,67 +97,102 @@ export function Hoy(props: PantallaProps) {
   );
 }
 
-/* ---------------- el táper que toca ---------------- */
+/* ---------------- tu plato ---------------- */
 
-/** Etiqueta del táper: su edad. El color dice si hay que darse prisa. */
-function Cinta({ l, hoy }: { l: Lote; hoy: string }) {
-  const f = frescura(l, hoy);
-  const texto = f.estado === "bien" ? `Hecho ${haceDias(l.hecho, hoy)}` : `${f.dias} días`;
-  return <span className={`cinta${f.estado === "bien" ? "" : ` cinta--${f.estado}`}`}>{texto}</span>;
-}
+function Plato({ datos, cambiar, ahora }: PantallaProps) {
+  const avisar = useAvisar();
+  const nevera = enNevera(datos);
+  const [momento, setMomento] = useState<Momento>(() => momentoAhora(datos, ahora));
+  const [elegidos, setElegidos] = useState<string[]>(() => sugerencia(datos));
+  const [gramos, setGramos] = useState<Record<string, string>>({});
+  const plato = elegidos.map((id) => nevera.find((l) => l.id === id)).filter((l): l is Lote => Boolean(l))
+    .map((lote) => ({ lote, gramos: Math.max(0, Number((gramos[lote.id] ?? "").replace(",", ".")) || 0) }));
+  const { lineas } = calcular(datos, plato, momento);
+  const hayGramos = plato.some((x) => x.gramos > 0);
 
-function Raciones({ l }: { l: Lote }) {
-  const q = quedan(l);
-  const icono = { comida: <IcoCheck />, rali: <IcoRali />, basura: <IcoBasura /> };
+  const alternar = (id: string) => setElegidos((e) => (e.includes(id) ? e.filter((x) => x !== id) : [...e, id]));
+
+  const apuntar = () => {
+    let d = datos;
+    const hechas: { loteId: string; salidaId: string }[] = [];
+    for (const x of plato.filter((p) => p.gramos > 0)) {
+      const r = sacar(d, x.lote.id, "comida", x.gramos, ahora, momento);
+      d = r.datos;
+      if (r.salida) hechas.push({ loteId: x.lote.id, salidaId: r.salida.id });
+    }
+    cambiar(() => d);
+    setGramos({});
+    const kcal = lineas.find((l) => l.clave === "kcal")!.valor;
+    avisar({ texto: `${MOMENTO[momento]} apuntada, ${kcal} kcal`, deshacer: () => cambiar((x) => hechas.reduce((y, h) => deshacer(y, h.loteId, h.salidaId), x)) });
+  };
+
   return (
-    <div className="raciones" aria-label={`Quedan ${q} de ${l.raciones} raciones`}>
-      {l.salidas.map((s) => <span key={s.id} className="racion" data-destino={s.destino}>{icono[s.destino]}</span>)}
-      {Array.from({ length: q }, (_, i) => <span key={`q${i}`} className="racion" data-destino="queda" />)}
-    </div>
-  );
-}
-
-function Taper({ l, tomas, hoy, sacar, verDetalle }: { l: Lote; tomas: Toma[]; hoy: string; sacar: (l: Lote, d: Destino) => void; verDetalle: () => void }) {
-  const f = frescura(l, hoy);
-  return (
-    <section className="taper" aria-label={`Táper: ${l.nombre}`}>
-      <Cinta l={l} hoy={hoy} />
-      <h1 className="taper__nombre">{l.nombre}</h1>
-      <Raciones l={l} />
-      <p className="taper__cuando">
-        {f.estado === "tirar" ? "Lleva demasiado en la nevera." : f.estado === "ya" ? "Cómetelo hoy." : textoTomas(tomas, hoy)}
-        <span className="nota"> {l.porRacion.kcal} kcal y {Math.round(l.porRacion.proteina)} g de proteína.</span>
-      </p>
-      <Boton grande ancho icono={<IcoComer />} onClick={() => sacar(l, "comida")}>Me la como</Boton>
-      <div className="taper__otros">
-        <button type="button" className="boton-texto boton-texto--rali" onClick={() => sacar(l, "rali")}><IcoRali />Para Rali</button>
-        <button type="button" className="boton-texto boton-texto--basura" onClick={() => sacar(l, "basura")}><IcoBasura />A la basura</button>
-        <button type="button" className="boton-texto boton-texto--suave" onClick={verDetalle}>Detalles</button>
+    <section className="plato" aria-label="Tu plato">
+      <div className="plato__cab">
+        <h1 className="plato__titulo">Tu plato</h1>
+        <div className="segmento segmento--peque" role="tablist" aria-label="Toma">
+          {(["comida", "cena"] as Momento[]).map((m) => <button key={m} type="button" role="tab" aria-selected={momento === m} onClick={() => setMomento(m)}>{MOMENTO[m]}</button>)}
+        </div>
       </div>
+      <div className="plato__tapers">
+        {plato.map(({ lote }) => (
+          <label key={lote.id} className="pesada">
+            <span className="pesada__nombre"><span><TipoMarca tipo={lote.tipo} /> {lote.nombre}</span><small>quedan {pesoTexto(quedan(lote))}</small></span>
+            <span className="pesada__g">
+              <input className="entrada entrada--g" id={`g-${lote.id}`} type="text" inputMode="numeric" placeholder="0" value={gramos[lote.id] ?? ""}
+                onChange={(e) => setGramos((g) => ({ ...g, [lote.id]: e.target.value.replace(/[^\d.,]/g, "") }))} />
+              <span>g</span>
+              <button type="button" className="quitar" aria-label={`Quitar ${lote.nombre} del plato`} onClick={(e) => { e.preventDefault(); alternar(lote.id); }}>×</button>
+            </span>
+          </label>
+        ))}
+      </div>
+
+      {nevera.some((l) => !elegidos.includes(l.id)) ? (
+        <div className="chips">
+          {nevera.filter((l) => !elegidos.includes(l.id)).map((l) => (
+            <button key={l.id} type="button" className="chip" onClick={() => alternar(l.id)}>+ <TipoMarca tipo={l.tipo} /> {l.nombre}</button>
+          ))}
+        </div>
+      ) : null}
+
+      <div className="macros-plato" aria-live="polite">
+        {lineas.map((l) => (
+          <div key={l.clave} className="macro-plato" data-estado={hayGramos ? l.estado : "vacio"}>
+            <span className="macro-plato__nombre">{l.nombre}</span>
+            <span className="macro-plato__valor">{l.valor}<small> / {l.objetivo}</small></span>
+            <span className="macro-plato__dif">
+              {!hayGramos ? "" : l.estado === "justo" ? "justo" : `${l.estado === "falta" ? "faltan" : "sobran"} ${l.diferencia}${l.unidad === "g" ? " g" : ""}`}
+              {hayGramos && l.pista ? <small>{l.pista}</small> : null}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      <Boton grande ancho disabled={!hayGramos} onClick={apuntar}>Apuntar {MOMENTO[momento].toLowerCase()}</Boton>
     </section>
   );
 }
 
-function OtroTaper({ l, hoy, sacar, verDetalle }: { l: Lote; hoy: string; sacar: (l: Lote, d: Destino) => void; verDetalle: () => void }) {
+/* ---------------- la nevera ---------------- */
+
+function FilaTaper({ l, hoy, abrir }: { l: Lote; hoy: string; abrir: () => void }) {
   const f = frescura(l, hoy);
   return (
-    <div className="fila-plana">
-      <button type="button" className="fila-plana__txt" onClick={verDetalle}>
-        <b>{l.nombre}</b>
-        <span className="nota" data-estado={f.estado}>Quedan {quedan(l)}, {f.estado === "bien" ? `hecho ${haceDias(l.hecho, hoy)}` : `${f.dias} días`}</span>
-      </button>
-      <div className="fila-plana__botones">
-        <button type="button" className="icono-boton icono-boton--comer" aria-label={`Me como una ración de ${l.nombre}`} onClick={() => sacar(l, "comida")}><IcoComer /></button>
-        <button type="button" className="icono-boton" aria-label={`Una ración de ${l.nombre} para Rali`} onClick={() => sacar(l, "rali")}><IcoRali /></button>
-        <button type="button" className="icono-boton" aria-label={`Tirar una ración de ${l.nombre}`} onClick={() => sacar(l, "basura")}><IcoBasura /></button>
-      </div>
-    </div>
+    <button type="button" className="fila-plana" onClick={abrir}>
+      <span className="fila-plana__txt">
+        <b><TipoMarca tipo={l.tipo} /> {l.nombre}</b>
+        <span className="nota">{textoPor100(por100(l))}</span>
+        <span className="nota" data-estado={f.estado}>{f.estado === "bien" ? `Hecho ${haceDias(l.hecho, hoy)}` : `${f.dias} días en la nevera`}{l.pesado ? "" : ". Peso estimado"}</span>
+      </span>
+      <span className="fila-plana__dcha mono">{pesoTexto(quedan(l))}</span>
+    </button>
   );
 }
 
 /* ---------------- qué cocinar ---------------- */
 
-function Batch({ datos, cambiar, ahora, hoy, irA, abiertoAlEmpezar }: PantallaProps & { abiertoAlEmpezar: boolean }) {
+function Batch({ datos, cambiar, ahora, hoy, irA, abiertoAlEmpezar, cuando }: PantallaProps & { abiertoAlEmpezar: boolean; cuando: string | null }) {
   const avisar = useAvisar();
   const receta = propuestaActual(datos);
   const [raciones, setRaciones] = useState(datos.ajustes.raciones);
@@ -179,27 +209,29 @@ function Batch({ datos, cambiar, ahora, hoy, irA, abiertoAlEmpezar }: PantallaPr
     );
   }
 
+  const r = racionDe(receta, tamanoDe(datos, receta));
+
   if (!abierto) {
     return (
       <button type="button" className="fila-plana fila-plana--boton" onClick={() => setAbierto(true)}>
-        <span className="fila-plana__txt"><span className="nota">Siguiente</span><b>{receta.nombre}</b></span>
+        <span className="fila-plana__txt"><span className="nota">{cuando ? `Cocinas ${cuando}` : "Siguiente"}</span><b>{receta.nombre}</b></span>
         <span className="flecha" aria-hidden="true">›</span>
       </button>
     );
   }
 
-  const tomas = tomasDeNuevoBatch(datos, raciones, ahora);
-  const lineas = lista(receta, raciones, datos.ajustes.tamano);
+  const tomas = tomasDeNuevoBatch(datos, r.kcal * raciones, ahora);
+  const lineas = lista(receta, raciones, tamanoDe(datos, receta));
   const tengo = loQueTengo(datos, hoy);
   const falta = lineas.filter((l) => !tengo.has(l.alimentoId));
-  const r = racionDe(receta, datos.ajustes.tamano);
 
   const loHago = () => {
+    const antes = new Set(datos.lotes.map((l) => l.id));
     const nuevo = cocinar(datos, receta, raciones, ahora);
-    const id = nuevo.lotes[nuevo.lotes.length - 1].id;
+    const ids = nuevo.lotes.filter((l) => !antes.has(l.id)).map((l) => l.id);
     cambiar(() => nuevo);
     window.scrollTo({ top: 0, behavior: "smooth" });
-    avisar({ texto: `${receta.corto} a la nevera`, deshacer: () => cambiar((d) => ({ ...borrarLote(d, id), propuesta: receta.id })) });
+    avisar({ texto: `${receta.corto} a la nevera. Pésalo cuando lo tengas`, deshacer: () => cambiar((d) => ({ ...ids.reduce(borrarLote, d), propuesta: receta.id })) });
   };
 
   const copiar = async () => {
@@ -209,9 +241,9 @@ function Batch({ datos, cambiar, ahora, hoy, irA, abiertoAlEmpezar }: PantallaPr
 
   return (
     <section className="bloque" aria-label="Qué cocinar">
-      <p className="nota">{abiertoAlEmpezar ? "Cocina hoy" : "Siguiente"}</p>
+      <p className="nota">{abiertoAlEmpezar ? "Cocina hoy" : cuando ? `Cocinas ${cuando}` : "Siguiente"}</p>
       <h2 className="bloque__titulo">{receta.nombre}</h2>
-      <p className="nota">{receta.minutos} min. Cada ración, {r.kcal} kcal y {Math.round(r.proteina)} g de proteína.</p>
+      <p className="nota">{formaDe(receta)}, {receta.minutos} min. Cada ración, {r.kcal} kcal y {Math.round(r.proteina)} g de proteína.</p>
 
       <div className="batch__raciones">
         <Paso valor={raciones} min={1} max={8} alCambiar={setRaciones} texto={(v) => `${v} ${v === 1 ? "ración" : "raciones"}`} />
@@ -245,22 +277,22 @@ function Batch({ datos, cambiar, ahora, hoy, irA, abiertoAlEmpezar }: PantallaPr
       <Boton grande ancho onClick={loHago}>Lo hago</Boton>
       <div className="fila fila--entre">
         <button type="button" className="boton-texto" onClick={() => setEligiendo(true)}>Otra receta</button>
-        <button type="button" className="boton-texto boton-texto--suave" onClick={() => setAMano(true)}>Ya tengo algo hecho</button>
+        <button type="button" className="boton-texto boton-texto--suave" onClick={() => setAMano(true)}>Añadir sobras</button>
       </div>
 
       <Hoja abierta={eligiendo} cerrar={() => setEligiendo(false)} titulo="Otra receta">
         <div className="lista-plana">
           {candidatas(datos).filter((x) => x.id !== receta.id).map((x) => {
-            const t = racionDe(x, datos.ajustes.tamano);
+            const t = racionDe(x, tamanoDe(datos, x));
             return (
               <button key={x.id} type="button" className="fila-plana fila-plana--boton" onClick={() => { cambiar((d) => proponer(d, x.id)); setEligiendo(false); }}>
-                <span className="fila-plana__txt"><b>{x.nombre}</b><span className="nota">{t.kcal} kcal, {x.minutos} min</span></span>
+                <span className="fila-plana__txt"><b>{x.nombre}</b><span className="nota">{formaDe(x)}, {t.kcal} kcal, {x.minutos} min</span></span>
               </button>
             );
           })}
         </div>
       </Hoja>
-      <AnadirAMano abierta={aMano} cerrar={() => setAMano(false)} hoy={hoy} alGuardar={(x) => {
+      <Sobras abierta={aMano} cerrar={() => setAMano(false)} hoy={hoy} datos={datos} cambiar={cambiar} alGuardar={(x) => {
         cambiar((d) => anadirAMano(d, x, ahora));
         setAMano(false);
         window.scrollTo({ top: 0, behavior: "smooth" });
@@ -270,29 +302,43 @@ function Batch({ datos, cambiar, ahora, hoy, irA, abiertoAlEmpezar }: PantallaPr
   );
 }
 
-function AnadirAMano({ abierta, cerrar, hoy, alGuardar }: {
-  abierta: boolean; cerrar: () => void; hoy: string;
-  alGuardar: (x: { nombre: string; raciones: number; hecho: string; porRacion: { gramos: number; kcal: number; proteina: number; carbos: number; grasa: number; fibra: number } }) => void;
+/* ---------------- sobras a mano ---------------- */
+
+function Sobras({ abierta, cerrar, hoy, datos, cambiar, alGuardar }: {
+  abierta: boolean; cerrar: () => void; hoy: string; datos: PantallaProps["datos"]; cambiar: PantallaProps["cambiar"];
+  alGuardar: (x: { nombre: string; tipo: Tipo; gramos: number; hecho: string; n: Por100 }) => void;
 }) {
-  const [nombre, setNombre] = useState("");
-  const [raciones, setRaciones] = useState(2);
+  const vacio = { nombre: "", gramos: "", kcal: "", proteina: "", carbos: "", grasa: "" };
+  const [f, setF] = useState(vacio);
+  const [tipo, setTipo] = useState<Tipo>("combinado");
   const [hace, setHace] = useState(0);
-  const [m, setM] = useState({ kcal: "700", proteina: "" });
+  const [buscando, setBuscando] = useState(false);
   const n = (x: string) => Math.max(0, Number(x.replace(",", ".")) || 0);
+  const v = (k: keyof typeof vacio) => (e: React.ChangeEvent<HTMLInputElement>) => setF({ ...f, [k]: e.target.value });
+  const valido = f.nombre.trim() && n(f.gramos) > 0 && n(f.kcal) > 0;
   return (
-    <Hoja abierta={abierta} cerrar={cerrar} titulo="A la nevera">
-      <Campo etiqueta="Qué es"><input className="entrada" id="mano-nombre" value={nombre} maxLength={50} placeholder="Paella del domingo" onChange={(e) => setNombre(e.target.value)} /></Campo>
-      <Paso valor={raciones} min={1} max={10} alCambiar={setRaciones} texto={(v) => `${v} ${v === 1 ? "ración" : "raciones"}`} />
+    <Hoja abierta={abierta} cerrar={cerrar} titulo="Sobras">
+      <Campo etiqueta="Qué es"><input className="entrada" id="sobras-nombre" value={f.nombre} maxLength={50} placeholder="Paella del domingo" onChange={v("nombre")} /></Campo>
+      <div className="chips">
+        {(Object.keys(TIPO) as Tipo[]).map((t) => <button key={t} type="button" className="chip" data-activo={tipo === t} onClick={() => setTipo(t)}>{TIPO[t].nombre}</button>)}
+      </div>
       <div className="chips">
         {["Hecho hoy", "Ayer", "Anteayer"].map((t, i) => <button key={t} type="button" className="chip" data-activo={hace === i} onClick={() => setHace(i)}>{t}</button>)}
       </div>
+      <Campo etiqueta="Peso (g)"><input className="entrada" id="sobras-g" inputMode="numeric" value={f.gramos} onChange={v("gramos")} /></Campo>
       <div className="rejilla">
-        <Campo etiqueta="kcal por ración"><input className="entrada" id="mano-kcal" inputMode="numeric" value={m.kcal} onChange={(e) => setM({ ...m, kcal: e.target.value })} /></Campo>
-        <Campo etiqueta="Proteína (g)"><input className="entrada" id="mano-prot" inputMode="numeric" value={m.proteina} onChange={(e) => setM({ ...m, proteina: e.target.value })} /></Campo>
+        <Campo etiqueta="kcal / 100 g"><input className="entrada" id="sobras-kcal" inputMode="decimal" value={f.kcal} onChange={v("kcal")} /></Campo>
+        <Campo etiqueta="Proteína / 100 g"><input className="entrada" id="sobras-p" inputMode="decimal" value={f.proteina} onChange={v("proteina")} /></Campo>
+        <Campo etiqueta="Hidratos / 100 g"><input className="entrada" id="sobras-hc" inputMode="decimal" value={f.carbos} onChange={v("carbos")} /></Campo>
+        <Campo etiqueta="Grasa / 100 g"><input className="entrada" id="sobras-g100" inputMode="decimal" value={f.grasa} onChange={v("grasa")} /></Campo>
       </div>
-      <Boton ancho disabled={!nombre.trim()} onClick={() => {
-        alGuardar({ nombre: nombre.trim(), raciones, hecho: sumarDias(hoy, -hace), porRacion: { gramos: 0, kcal: Math.round(n(m.kcal)), proteina: n(m.proteina), carbos: 0, grasa: 0, fibra: 0 } });
-        setNombre(""); setRaciones(2); setHace(0);
+      {buscando ? (
+        <Buscador guardados={datos.alimentos} alGuardarAlimento={(a) => cambiar((d) => ({ ...d, alimentos: { ...d.alimentos, [a.id]: a } }))}
+          alAnadir={(i) => { setF({ nombre: f.nombre || i.nombre, gramos: f.gramos || String(i.gramos), kcal: String(i.n.kcal), proteina: String(i.n.proteina), carbos: String(i.n.carbos), grasa: String(i.n.grasa) }); setBuscando(false); }} />
+      ) : <button type="button" className="boton-texto" onClick={() => setBuscando(true)}>Buscar sus valores</button>}
+      <Boton ancho disabled={!valido} onClick={() => {
+        alGuardar({ nombre: f.nombre.trim(), tipo, gramos: Math.round(n(f.gramos)), hecho: sumarDias(hoy, -hace), n: { kcal: n(f.kcal), proteina: n(f.proteina), carbos: n(f.carbos), grasa: n(f.grasa), fibra: 0 } });
+        setF(vacio); setHace(0);
       }}>Meter en la nevera</Boton>
     </Hoja>
   );
@@ -328,7 +374,8 @@ function Comido({ datos, cambiar, ahora, hoy }: PantallaProps) {
             <div key={a.id} className="apunte">
               <span className="apunte__hora">{horaDe(new Date(a.cuando))}</span>
               <span className="apunte__nombre">{a.nombre}</span>
-              <span className="apunte__kcal">{a.t.kcal}</span>
+              <span className="apunte__kcal">{Math.round(a.t.gramos)} g</span>
+              <span className="apunte__kcal">{Math.round(a.t.kcal)}</span>
               <button type="button" className="quitar" aria-label={`Quitar ${a.nombre}`}
                 onClick={() => cambiar((d) => (a.loteId ? deshacer(d, a.loteId, a.id) : quitarExtra(d, hoy, a.id)))}>×</button>
             </div>

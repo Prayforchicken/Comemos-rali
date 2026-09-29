@@ -34,6 +34,14 @@ export function Ajustes({ datos, cambiar }: PantallaProps) {
           <Campo etiqueta="Grasa (g)"><input className="entrada" id="obj-grasa" type="number" inputMode="numeric" value={a.objetivo.grasa} onChange={obj("grasa")} /></Campo>
           <Campo etiqueta="Fibra (g)"><input className="entrada" id="obj-fibra" type="number" inputMode="numeric" value={a.objetivo.fibra} onChange={obj("fibra")} /></Campo>
         </div>
+        <div className="rejilla">
+          {(["comida", "cena"] as const).map((m) => (
+            <Campo key={m} etiqueta={`${m === "comida" ? "Comida" : "Cena"} (% del día)`}>
+              <input className="entrada" id={`reparto-${m}`} type="number" inputMode="numeric" min={5} max={80} value={Math.round(a.reparto[m] * 100)}
+                onChange={(e) => poner({ reparto: { ...a.reparto, [m]: Math.min(0.8, Math.max(0.05, (Number(e.target.value) || 0) / 100)) } })} />
+            </Campo>
+          ))}
+        </div>
       </section>
 
       <section className="bloque">
@@ -41,12 +49,6 @@ export function Ajustes({ datos, cambiar }: PantallaProps) {
         <div className="ajuste">
           <span>Raciones</span>
           <Paso valor={a.raciones} min={1} max={8} alCambiar={(v) => poner({ raciones: v })} texto={(v) => String(v)} />
-        </div>
-        <div className="ajuste">
-          <span>Tamaño de ración</span>
-          <div className="chips">
-            {[80, 90, 100, 110, 120].map((v) => <button key={v} type="button" className="chip" data-activo={a.tamano === v} onClick={() => poner({ tamano: v })}>{v} %</button>)}
-          </div>
         </div>
       </section>
 

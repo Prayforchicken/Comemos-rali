@@ -83,10 +83,19 @@ const FILAS: Fila[] = [
   ["manzana", "Manzana", 52, 0.3, 13.8, 0.2, 2.4, ["1 unidad", 180]],
 ];
 
+/** Peso hecho / peso crudo (aproximado). Sirve para estimar cuánto pesa la olla antes de pesarla. */
+const RINDE: Record<string, number> = {
+  arroz: 2.8, "arroz-basmati": 2.8, pasta: 2.3, cuscus: 2.1,
+  "lentejas-pardinas": 3, "lentejas-rojas": 3.5, "soja-texturizada": 3,
+  "tofu-firme": 0.85, seitan: 0.95, "tomate-triturado": 0.8, "leche-coco-ligera": 0.9,
+  cebolla: 0.8, zanahoria: 0.9, "pimiento-rojo": 0.8, calabacin: 0.75, champinon: 0.7, espinacas: 0.5, brocoli: 0.95,
+};
+
 export const BASE: Alimento[] = FILAS.map(([id, nombre, kcal, proteina, carbos, grasa, fibra, porcion, unidad]) => ({
   id: `base-${id}`, nombre, fuente: "base", n: { kcal, proteina, carbos, grasa, fibra },
   porcion: porcion ? { nombre: porcion[0], gramos: porcion[1] } : undefined,
   unidad: unidad ? ({ singular: unidad[0], plural: unidad[1], gramos: unidad[2], paso: unidad[3] } satisfies Unidad) : undefined,
+  rinde: RINDE[id],
 }));
 
 const POR_ID = new Map(BASE.map((a) => [a.id.slice(5), a]));

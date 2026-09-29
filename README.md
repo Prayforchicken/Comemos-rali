@@ -5,54 +5,57 @@ Web instalable (PWA, en Vercel) y APK de Android con avisos.
 
 ## Cómo se usa
 
-1. **"Hoy no tengo nada."** Abres la app y te propone un **batch para 2 días** (4 raciones: comida y cena).
-   Te dice para qué tomas da ("hoy cena · mañana comida y cena · jue comida").
-2. **Mira en la nevera.** Los ingredientes salen como lista `- [ ]` con los gramos para esas raciones
-   (y en unidades de cocina: "≈ 3 botes de 400 g", "4 dientes"). Marcas lo que tienes; lo que queda sin marcar
-   es lo que te falta, y se copia de un toque para la compra.
-3. **"Lo hago".** El batch pasa a la nevera y desde ese momento es **lo primero que ves** al abrir la app,
-   con la etiqueta del táper (hecho hoy / ayer / hace 3 días), hasta que se acaban las raciones.
-4. **Cada ración termina en uno de tres sitios:** *Me la como* (suma kcal y macros al día),
-   *Para Rali* o *A la basura*. Todo se cuenta. Si te equivocas, **Deshacer**.
-5. Cuando queda 1 ración, te enseña ya el **siguiente batch** para que mires qué te falta.
+1. **Nevera vacía.** La app propone un batch para 2 días (4 raciones; cada ración se ajusta a lo que
+   toca en una comida o cena). Dice para qué tomas da. Los ingredientes, plegados, salen con gramos
+   y unidades de cocina ("≈ 3 botes de 400 g"); marcas lo que tienes y copias lo que falta.
+2. **"Lo hago".** Cada parte de la receta va a su táper, con su tipo:
+   **P** (plato de proteína, el curry), **H** (guarnición de hidratos, el arroz) o **P.C.** (plato combinado,
+   la boloñesa con la pasta). La app estima cuánto pesa lo cocinado; lo corriges pesando el táper.
+3. **Tu plato.** Eliges los tápers, pones el plato en la báscula y escribes los gramos de cada uno.
+   Al momento ves kcal, proteína, hidratos y grasa frente a lo que toca en esa comida o cena:
+   en rojo lo que falta (y cuántos gramos más de qué táper lo cubren), en blanco lo que sobra.
+   "Apuntar" descuenta los gramos del táper y guarda cuánto comiste de cada cosa ese día.
+4. **Para Rali o a la basura**, también en gramos, desde el detalle del táper. Todo se cuenta.
+5. **Semana.** Qué comes en cada toma de los próximos 7 días y qué día vuelves a cocinar.
 
 Además:
-- **Hoy llevas**: kcal, proteína, hidratos, grasa y fibra del día frente a tu objetivo. Botones rápidos para
-  Plenny Pro, ½ Plenny y "otra cosa" (buscador con base local y wger).
-- **Frescura**: a los 3–4 días el táper avisa "cómetelo ya"; a los 5, "mejor tirarlo".
-- **¿Ya tienes algo hecho?** Sobras o algo que no está en la app se meten en la nevera a mano.
-- **Recetas**: 8 recetas de batch vegetarianas (~720–850 kcal y 38–53 g de proteína por ración).
-  Se proponen por turnos (primero las que nunca has hecho). Puedes apartar las que no quieras y crear las tuyas.
-- **Cuentas**: raciones comidas, para Rali y tiradas (7 días, 30 días, siempre), por receta,
-  kcal de los últimos 7 días e historial de tápers.
-- **Avisos** (APK): a la hora de comer y cenar, qué táper toca; y la tarde que se acaba la nevera, "toca batch".
-- **Copia de seguridad** en archivo (Ajustes).
+- **En la nevera**: cada táper con su tipo, lo que queda y sus macros por 100 g. Sobras a mano con sus valores.
+- **Frescura**: a los 3–4 días avisa "cómetelo ya"; a los 5, "mejor tirarlo".
+- **Comido hoy**: lo apuntado con sus gramos, macros del día y botones rápidos (Plenny, "otra cosa").
+- **Recetas**: 8 de batch vegetarianas; se proponen por turnos. Recetas propias como plato combinado
+  o como principal + guarnición.
+- **Cuentas**: gramos comidos, para Rali y tirados (7 días, 30 días, siempre), por táper, kcal por día.
+- **Avisos** (APK): a la hora de comer y cenar, qué tápers tocan; la tarde en que toca cocinar, qué receta.
+- **Copia de seguridad** en archivo (Ajustes). Las copias antiguas (en raciones) se pasan solas a gramos.
 
 ## Estructura
 
 ```
 src/
   nucleo/        La lógica, sin pantallas (funciones puras, con pruebas en pruebas/).
-    tipos.ts       Qué se guarda: Receta, Lote (táper en la nevera), Salida (a dónde fue cada ración), Ajustes.
-    lotes.ts       La nevera: cocinar, sacar una ración, deshacer, frescura y a qué tomas da cada táper.
-    propuesta.ts   Qué cocinar: turno de recetas, "otra idea" y la lista de ingredientes con unidades.
-    dia.ts         Lo comido en un día (raciones comidas + extras).
-    cuentas.ts     Raciones comidas / Rali / basura y kcal de los últimos días.
+    tipos.ts       Qué se guarda: Receta (con sus partes), Lote (un táper), Salida (gramos que salen), Ajustes.
+    receta.ts      Tipos P / H / P.C., macros de una ración y peso estimado de lo cocinado.
+    lotes.ts       La nevera: cocinar, sacar gramos, pesar, frescura y a qué tomas da lo que hay.
+    plato.ts       Tu plato: macros de lo pesado frente a lo que toca, qué falta y qué sobra.
+    semana.ts      Plan de 7 días y cuándo volver a cocinar.
+    propuesta.ts   Qué cocinar: turno de recetas y lista de ingredientes con unidades.
+    dia.ts         Lo comido en un día (gramos de los tápers + extras).
+    cuentas.ts     Gramos comidos / Rali / basura y kcal de los últimos días.
     fechas.ts      Fechas y horas (hora de España).
-  recetas/       Las recetas de la app. Cantidades POR RACIÓN; las kcal salen solas de los ingredientes.
-  alimentos/     Base local de alimentos (por 100 g), buscador de wger y cuentas de nutrición.
-  datos/         Guardado en el móvil y copia de seguridad.
+  recetas/       Las recetas de la app, por partes. Cantidades en crudo POR RACIÓN.
+  alimentos/     Base local de alimentos (por 100 g y cuánto pesan hechos), buscador de wger, cuentas.
+  datos/         Guardado en el móvil, copia de seguridad y paso de la versión 1 a la 2.
   avisos/        Notificaciones (APK: programadas de verdad; web: con la app abierta).
   componentes/   Piezas de interfaz (botones, hojas, buscador, detalle de un táper).
-  pantallas/     Una pantalla por pestaña: Hoy, Recetas, Cuentas, Ajustes.
+  pantallas/     Una pantalla por pestaña: Hoy, Semana, Recetas, Cuentas, Ajustes.
   estilos.css    Todos los estilos (claro y oscuro).
 pruebas/         Pruebas de la lógica: `npm test`.
 scripts/         Iconos y preparación del proyecto Android.
 .github/workflows/apk-adrian.yml   Compila la APK en GitHub y la publica en Releases.
 ```
 
-Para añadir una receta de la app: copia un bloque en `src/recetas/recetas.ts` y usa ingredientes de
-`src/alimentos/base.ts`. Para cambiar cuándo avisa de la frescura: `frescura()` en `src/nucleo/lotes.ts`.
+Para añadir una receta: copia un bloque en `src/recetas/recetas.ts` con ingredientes de `src/alimentos/base.ts`.
+Lo que toca en cada comida o cena sale del objetivo diario y del reparto de Ajustes (`objetivoToma()` en `src/nucleo/plato.ts`).
 
 ## Publicar
 
@@ -76,5 +79,6 @@ npm run build   # comprobar tipos y compilar
 ## Límites
 
 - Los datos viven en el móvil. Se pasan a otro con la copia de seguridad.
-- Las kcal y macros de las recetas son aproximadas (tablas de referencia por 100 g).
+- Las kcal y macros de las recetas son aproximadas (tablas de referencia por 100 g). El peso de lo cocinado
+  es una estimación hasta que pesas el táper.
 - En la web, los avisos solo llegan con la app abierta. Los fiables son los de la APK.

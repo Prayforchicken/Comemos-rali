@@ -7,7 +7,7 @@ import type { PantallaProps } from "../App";
 import { Segmento } from "../componentes/base";
 import { LoteDetalle } from "../componentes/LoteDetalle";
 import { resumen, ultimosDias } from "../nucleo/cuentas";
-import { diaCorto, fechaCorta, sumarDias } from "../nucleo/fechas";
+import { diaCorto, fechaCorta, pesoTexto, sumarDias } from "../nucleo/fechas";
 import { quedan } from "../nucleo/lotes";
 import type { Lote } from "../nucleo/tipos";
 
@@ -29,20 +29,20 @@ export function Cuentas({ datos, cambiar, hoy, ahora }: PantallaProps) {
       <Segmento etiqueta="Periodo" valor={periodo} alCambiar={setPeriodo} opciones={[{ v: "semana", t: "7 días" }, { v: "mes", t: "30 días" }, { v: "siempre", t: "Siempre" }]} />
 
       <div className="cifras">
-        <div className="comida"><b>{r.comida}</b><span>comidas</span></div>
-        <div className="rali"><b>{r.rali}</b><span>para Rali</span></div>
-        <div className="basura"><b>{r.basura}</b><span>a la basura</span></div>
+        <div className="comida"><b>{pesoTexto(r.comida)}</b><span>comidos</span></div>
+        <div className="rali"><b>{pesoTexto(r.rali)}</b><span>para Rali</span></div>
+        <div className="basura"><b>{pesoTexto(r.basura)}</b><span>a la basura</span></div>
       </div>
-      {r.total ? <p className="nota">Tiras el {r.pctBasura} % de lo que cocinas. {r.lotes === 1 ? "1 batch" : `${r.lotes} batch`} en este periodo.</p> : null}
+      {r.total ? <p className="nota">Tiras el {r.pctBasura} % de lo que cocinas. {r.batch} batch en este periodo.</p> : null}
 
       {r.recetas.length ? (
         <section className="bloque">
           <div className="tabla-scroll">
             <table className="tabla">
-              <thead><tr><th>Receta</th><th>Veces</th><th>Comidas</th><th>Rali</th><th>Basura</th></tr></thead>
+              <thead><tr><th>Táper</th><th>Veces</th><th>Comido</th><th>Rali</th><th>Basura</th></tr></thead>
               <tbody>
                 {r.recetas.map((x) => (
-                  <tr key={x.nombre}><td>{x.nombre}</td><td>{x.lotes}</td><td>{x.comida}</td><td>{x.rali}</td><td>{x.basura}</td></tr>
+                  <tr key={x.nombre}><td>{x.nombre}</td><td>{x.veces}</td><td>{pesoTexto(x.comida)}</td><td>{x.rali ? pesoTexto(x.rali) : "0"}</td><td>{x.basura ? pesoTexto(x.basura) : "0"}</td></tr>
                 ))}
               </tbody>
             </table>
@@ -72,9 +72,9 @@ export function Cuentas({ datos, cambiar, hoy, ahora }: PantallaProps) {
           <div className="lista-plana">
             {lotes.slice(0, 30).map((l) => {
               const c = { comida: 0, rali: 0, basura: 0 };
-              l.salidas.forEach((s) => (c[s.destino] += 1));
+              l.salidas.forEach((s) => (c[s.destino] += s.gramos));
               const q = quedan(l);
-              const partes = [`${c.comida} comidas`, c.rali ? `${c.rali} para Rali` : "", c.basura ? `${c.basura} a la basura` : "", q ? `quedan ${q}` : ""].filter(Boolean);
+              const partes = [`${pesoTexto(c.comida)} comidos`, c.rali ? `${pesoTexto(c.rali)} para Rali` : "", c.basura ? `${pesoTexto(c.basura)} a la basura` : "", q ? `quedan ${pesoTexto(q)}` : ""].filter(Boolean);
               return (
                 <button key={l.id} type="button" className="fila-plana" onClick={() => setDetalle(l)}>
                   <span className="fila-plana__txt"><b>{l.nombre}</b><span className="nota">{partes.join(", ")}</span></span>

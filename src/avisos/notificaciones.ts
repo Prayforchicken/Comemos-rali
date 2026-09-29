@@ -1,6 +1,6 @@
 /* ============================================================
    Avisos para que no se olvide lo que hay en la nevera.
-   - A la hora de comer y de cenar: qué táper toca (mientras quede algo).
+   - A la hora de comer y de cenar: qué tápers tocan (mientras quede algo).
    - El día que se acaba la nevera, a la hora de cocinar: "toca batch".
    En la APK se programan de verdad (suenan con la app cerrada).
    En la web solo mientras la app está abierta.
@@ -8,7 +8,7 @@
 import { Capacitor } from "@capacitor/core";
 import { LocalNotifications } from "@capacitor/local-notifications";
 import { fechaDe, MOMENTO, sumarDias } from "../nucleo/fechas";
-import { proyectar, quedan, type Toma } from "../nucleo/lotes";
+import { planSemana } from "../nucleo/semana";
 import type { Datos } from "../nucleo/tipos";
 
 export const esNativo = () => Capacitor.isNativePlatform();
@@ -24,36 +24,25 @@ const idDe = (fecha: string, n: number) => Number(fecha.replaceAll("-", "").slic
 
 export function calcularAvisos(d: Datos, ahora = new Date()): Aviso[] {
   if (!d.ajustes.avisos) return [];
-  const hoy = fechaDe(ahora);
-  const plan = proyectar(d, ahora);
+  const { huecos, cocinados } = planSemana(d, ahora, 4);
   const avisos: Aviso[] = [];
-  const restantes = new Map(d.lotes.map((l) => [l.id, quedan(l)]));
 
-  for (const { loteId, toma } of plan.slice(0, 8)) {
-    const lote = d.lotes.find((l) => l.id === loteId);
-    if (!lote) continue;
-    const n = restantes.get(loteId) ?? 0;
-    restantes.set(loteId, n - 1);
+  for (const { toma, nombre } of huecos.filter((h) => h.deLaNevera).slice(0, 8)) {
     avisos.push({
       id: idDe(toma.fecha, toma.momento === "comida" ? 1 : 2),
       cuando: aFecha(toma.fecha, toma.momento === "comida" ? d.ajustes.horaComida : d.ajustes.horaCena),
-      titulo: `${MOMENTO[toma.momento]}: ${lote.nombre}`,
-      texto: n > 1 ? `Quedan ${n} raciones en la nevera. Márcala cuando te la comas.` : "Es la última ración de la nevera. Márcala cuando te la comas.",
+      titulo: `${MOMENTO[toma.momento]}: ${nombre}`,
+      texto: "Pesa tu plato y apúntalo en la app.",
     });
   }
 
-  // Toca batch: la tarde del día en que se come lo último de la nevera.
-  // Si lo último es la comida, así hay cena; si es la cena, así hay comida mañana.
-  const ultima: Toma | undefined = plan[plan.length - 1]?.toma;
-  const dia = ultima?.fecha ?? hoy;
-  let cuando = aFecha(dia, d.ajustes.horaCocinar);
-  if (cuando <= ahora) cuando = aFecha(sumarDias(dia, 1), d.ajustes.horaCocinar);
-  avisos.push({
-    id: idDe(fechaDe(cuando), 3),
-    cuando,
-    titulo: "Toca batch",
-    texto: plan.length ? "Se acaba lo de la nevera. Mira qué cocinar y qué te falta." : "La nevera está vacía. Mira qué cocinar y qué te falta.",
-  });
+  // Toca batch: el primer cocinado del plan, a la hora de cocinar (o al día siguiente si ya pasó).
+  const primero = cocinados[0];
+  if (primero) {
+    let cuando = aFecha(primero.fecha, d.ajustes.horaCocinar);
+    if (cuando <= ahora) cuando = aFecha(sumarDias(primero.fecha, 1), d.ajustes.horaCocinar);
+    avisos.push({ id: idDe(fechaDe(cuando), 3), cuando, titulo: `Toca batch: ${primero.nombre}`, texto: "Mira qué te falta en la lista de ingredientes." });
+  }
   return avisos.filter((a) => a.cuando > ahora);
 }
 

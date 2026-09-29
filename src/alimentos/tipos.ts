@@ -22,9 +22,11 @@ export interface Alimento {
   /** Ración típica para rellenar los gramos al añadirlo (p. ej. "media pizza", 200 g). */
   porcion?: { nombre: string; gramos: number };
   unidad?: Unidad;
+  /** Cuánto pesa hecho frente a crudo: arroz ≈ 2,8 (absorbe agua), verduras < 1 (pierden agua). Sin dato = 1. */
+  rinde?: number;
 }
 
 /** Un alimento dentro de una comida o receta. Guarda una copia de los valores para no depender de internet. */
-export interface Item { alimentoId: string; nombre: string; gramos: number; n: Por100; unidad?: Unidad }
+export interface Item { alimentoId: string; nombre: string; gramos: number; n: Por100; unidad?: Unidad; rinde?: number }
 
 export interface Totales extends Por100 { gramos: number }

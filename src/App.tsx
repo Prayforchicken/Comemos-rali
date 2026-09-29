@@ -6,7 +6,7 @@ import { App as AppNativa } from "@capacitor/app";
 import { useEffect, useState } from "react";
 import { esNativo, reprogramar } from "./avisos/notificaciones";
 import { Avisos } from "./componentes/base";
-import { IcoAjustes, IcoCuentas, IcoRecetas, IcoTaper } from "./componentes/Iconos";
+import { IcoAjustes, IcoCuentas, IcoRecetas, IcoSemana, IcoTaper } from "./componentes/Iconos";
 import { useDatos, type Cambio } from "./datos/almacen";
 import { fechaDe } from "./nucleo/fechas";
 import type { Datos } from "./nucleo/tipos";
@@ -14,8 +14,9 @@ import { Ajustes } from "./pantallas/Ajustes";
 import { Cuentas } from "./pantallas/Cuentas";
 import { Hoy } from "./pantallas/Hoy";
 import { Recetas } from "./pantallas/Recetas";
+import { Semana } from "./pantallas/Semana";
 
-export type Pestana = "hoy" | "recetas" | "cuentas" | "ajustes";
+export type Pestana = "hoy" | "semana" | "recetas" | "cuentas" | "ajustes";
 
 export interface PantallaProps {
   datos: Datos;
@@ -29,6 +30,7 @@ export interface PantallaProps {
 
 const PESTANAS: { id: Pestana; nombre: string; Icono: () => React.JSX.Element }[] = [
   { id: "hoy", nombre: "Hoy", Icono: IcoTaper },
+  { id: "semana", nombre: "Semana", Icono: IcoSemana },
   { id: "recetas", nombre: "Recetas", Icono: IcoRecetas },
   { id: "cuentas", nombre: "Cuentas", Icono: IcoCuentas },
   { id: "ajustes", nombre: "Ajustes", Icono: IcoAjustes },
@@ -71,6 +73,7 @@ export default function App() {
       <div className="app">
         <main className="contenido">
           {pestana === "hoy" && <Hoy {...props} />}
+          {pestana === "semana" && <Semana {...props} />}
           {pestana === "recetas" && <Recetas {...props} />}
           {pestana === "cuentas" && <Cuentas {...props} />}
           {pestana === "ajustes" && <Ajustes {...props} />}

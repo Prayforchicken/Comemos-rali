@@ -9,7 +9,8 @@ import type { Item } from "../alimentos/tipos";
 import { Boton, Campo, Confirmar, Hoja, Paso, useAvisar } from "../componentes/base";
 import { Buscador, ListaItems } from "../componentes/Buscador";
 import { haceDias } from "../nucleo/fechas";
-import { nuevoId, racionDe } from "../nucleo/lotes";
+import { nuevoId, tamanoDe } from "../nucleo/lotes";
+import { formaDe, racionDe, TIPO } from "../nucleo/receta";
 import { apartar, lista, proponer, todasLasRecetas, ultimaVez } from "../nucleo/propuesta";
 import type { Receta } from "../nucleo/tipos";
 
@@ -23,20 +24,20 @@ export function Recetas({ datos, cambiar, hoy, irA }: PantallaProps) {
   const apartadas = todas.filter((r) => datos.apartadas.includes(r.id));
 
   const Fila = ({ r }: { r: Receta }) => {
-    const t = racionDe(r, datos.ajustes.tamano);
+    const t = racionDe(r, tamanoDe(datos, r));
     const u = ultimaVez(datos, r.id);
     return (
       <button type="button" className="fila-plana" onClick={() => setViendo(r)}>
         <span className="fila-plana__txt">
           <b>{r.nombre}</b>
-          <span className="nota">{t.kcal} kcal, {r.minutos} min{r.propia ? ", tuya" : ""}</span>
+          <span className="nota">{formaDe(r)}, {t.kcal} kcal, {r.minutos} min{r.propia ? ", tuya" : ""}</span>
         </span>
         <span className="fila-plana__dcha">{u ? haceDias(u, hoy) : "nunca"}</span>
       </button>
     );
   };
 
-  const nueva = (): Receta => ({ id: nuevoId("receta"), nombre: "", corto: "", ingredientes: [], pasos: [], minutos: 40, guardar: "3 días en la nevera.", propia: true, salen: 4 });
+  const nueva = (): Receta => ({ id: nuevoId("receta"), nombre: "", corto: "", componentes: [], pasos: [], minutos: 40, guardar: "3 días en la nevera.", propia: true, salen: 4 });
 
   return (
     <div className="pantalla">
@@ -55,7 +56,7 @@ export function Recetas({ datos, cambiar, hoy, irA }: PantallaProps) {
       ) : null}
 
       <Hoja abierta={Boolean(viendo)} cerrar={() => setViendo(null)} titulo={viendo?.nombre ?? ""}>
-        {viendo ? <DetalleReceta r={viendo} raciones={datos.ajustes.raciones} tamano={datos.ajustes.tamano} apartada={datos.apartadas.includes(viendo.id)}
+        {viendo ? <DetalleReceta r={viendo} raciones={datos.ajustes.raciones} tamano={tamanoDe(datos, viendo)} apartada={datos.apartadas.includes(viendo.id)}
           alProponer={() => { cambiar((d) => apartar(proponer(d, viendo.id), viendo.id, false)); setViendo(null); irA("hoy"); avisar({ texto: `Toca ${viendo.corto.toLowerCase()}` }); }}
           alApartar={(a) => { cambiar((d) => apartar(d, viendo.id, a)); setViendo(null); avisar({ texto: a ? `No te propondré ${viendo.corto}` : `${viendo.corto} vuelve a la lista` }); }}
           alEditar={() => { setEditando(viendo); setViendo(null); }}
@@ -87,6 +88,9 @@ function DetalleReceta({ r, raciones, tamano, apartada, alProponer, alApartar, a
   return (
     <>
       <p className="nota">{r.minutos} min. Cada ración, {t.kcal} kcal y {Math.round(t.proteina)} g de proteína.</p>
+      <ul className="lista-simple">
+        {r.componentes.map((c) => <li key={c.id}><span>{c.nombre}</span><span className="nota">{TIPO[c.tipo].nombre}</span></li>)}
+      </ul>
       <details className="pliegue">
         <summary><span>Ingredientes</span><span className="nota">{raciones} raciones</span></summary>
         <ul className="lista-simple">
@@ -114,43 +118,70 @@ function DetalleReceta({ r, raciones, tamano, apartada, alProponer, alApartar, a
   );
 }
 
+/** Lista de ingredientes de una parte, con su buscador. */
+function Parte({ titulo, items, setItems, salen, datos, alGuardarAlimento }: {
+  titulo: string; items: Item[]; setItems: (f: (l: Item[]) => Item[]) => void; salen: number;
+  datos: PantallaProps["datos"]; alGuardarAlimento: Parameters<typeof Buscador>[0]["alGuardarAlimento"];
+}) {
+  const [buscando, setBuscando] = useState(!items.length);
+  return (
+    <div className="bloque">
+      <h3 className="bloque__titulo bloque__titulo--peque">{titulo}</h3>
+      <ListaItems items={items} cambiar={(l) => setItems(() => l)} divisor={salen} etiquetaTotal="Por ración" />
+      {buscando ? (
+        <Buscador guardados={datos.alimentos} alGuardarAlimento={alGuardarAlimento} alAnadir={(i) => { setItems((l) => [...l, i]); setBuscando(false); }} />
+      ) : <button type="button" className="boton-texto" onClick={() => setBuscando(true)}>+ Ingrediente</button>}
+    </div>
+  );
+}
+
 function EditorReceta({ inicial, datos, alGuardar, alGuardarAlimento }: {
   inicial: Receta; datos: PantallaProps["datos"]; alGuardar: (r: Receta) => void; alGuardarAlimento: Parameters<typeof Buscador>[0]["alGuardarAlimento"];
 }) {
   const salen0 = inicial.salen ?? 4;
+  const principal0 = inicial.componentes.find((c) => c.tipo !== "hidratos") ?? inicial.componentes[0];
+  const guarnicion0 = inicial.componentes.length > 1 ? inicial.componentes.find((c) => c.tipo === "hidratos") : undefined;
+  // En el editor se escriben las cantidades de TODA la olla; se guardan por ración.
+  const aOlla = (l: Item[] = []) => l.map((i) => ({ ...i, gramos: Math.round(i.gramos * salen0) }));
   const [nombre, setNombre] = useState(inicial.nombre);
   const [salen, setSalen] = useState(salen0);
-  // En el editor se escriben las cantidades de TODA la olla; se guardan por ración.
-  const [items, setItems] = useState<Item[]>(inicial.ingredientes.map((i) => ({ ...i, gramos: Math.round(i.gramos * salen0) })));
+  const [separado, setSeparado] = useState(Boolean(guarnicion0));
+  const [principal, setPrincipal] = useState<Item[]>(aOlla(principal0?.ingredientes));
+  const [guarnicion, setGuarnicion] = useState<Item[]>(aOlla(guarnicion0?.ingredientes));
   const [pasos, setPasos] = useState(inicial.pasos.join("\n"));
   const [minutos, setMinutos] = useState(String(inicial.minutos));
   const [guardar, setGuardar] = useState(inicial.guardar);
-  const [buscando, setBuscando] = useState(!inicial.ingredientes.length);
-  const valido = nombre.trim() && items.some((i) => i.gramos > 0);
-  const racion = totales(items.map((i) => ({ ...i, gramos: i.gramos / salen })));
+  const todos = separado ? [...principal, ...guarnicion] : principal;
+  const valido = nombre.trim() && principal.some((i) => i.gramos > 0) && (!separado || guarnicion.some((i) => i.gramos > 0));
+  const racion = totales(todos.map((i) => ({ ...i, gramos: i.gramos / salen })));
+  const porRacion = (l: Item[]) => l.filter((i) => i.gramos > 0).map((i) => ({ ...i, gramos: Math.round((i.gramos / salen) * 10) / 10 }));
   return (
     <>
-      <Campo etiqueta="Nombre"><input className="entrada" id="receta-nombre" value={nombre} maxLength={60} onChange={(e) => setNombre(e.target.value)} placeholder="Ej.: Garbanzos con espinacas" /></Campo>
-      <div className="fila fila--entre">
+      <Campo etiqueta="Nombre"><input className="entrada" id="receta-nombre" value={nombre} maxLength={60} onChange={(e) => setNombre(e.target.value)} placeholder="Garbanzos con espinacas" /></Campo>
+      <div className="ajuste">
         <span>Salen</span>
         <Paso valor={salen} min={1} max={12} alCambiar={setSalen} texto={(v) => `${v} ${v === 1 ? "ración" : "raciones"}`} />
       </div>
-      <h3 className="bloque__titulo bloque__titulo--peque">Ingredientes de toda la olla</h3>
-      <ListaItems items={items} cambiar={setItems} divisor={salen} etiquetaTotal="Por ración" />
-      {buscando ? (
-        <Buscador guardados={datos.alimentos} alGuardarAlimento={alGuardarAlimento} alAnadir={(i) => { setItems((l) => [...l, i]); setBuscando(false); }} />
-      ) : <button type="button" className="boton-texto" onClick={() => setBuscando(true)}>+ Ingrediente</button>}
+      <div className="chips">
+        <button type="button" className="chip" data-activo={!separado} onClick={() => setSeparado(false)}>Plato combinado</button>
+        <button type="button" className="chip" data-activo={separado} onClick={() => setSeparado(true)}>Principal + guarnición</button>
+      </div>
+      <Parte titulo={separado ? "Principal, toda la olla" : "Ingredientes, toda la olla"} items={principal} setItems={setPrincipal} salen={salen} datos={datos} alGuardarAlimento={alGuardarAlimento} />
+      {separado ? <Parte titulo="Guarnición de hidratos" items={guarnicion} setItems={setGuarnicion} salen={salen} datos={datos} alGuardarAlimento={alGuardarAlimento} /> : null}
       <Campo etiqueta="Pasos (uno por línea)"><textarea className="entrada" id="receta-pasos" rows={5} value={pasos} onChange={(e) => setPasos(e.target.value)} /></Campo>
       <div className="rejilla">
         <Campo etiqueta="Minutos"><input className="entrada" id="receta-minutos" inputMode="numeric" value={minutos} onChange={(e) => setMinutos(e.target.value)} /></Campo>
       </div>
       <Campo etiqueta="Cómo se guarda"><input className="entrada" id="receta-guardar" value={guardar} onChange={(e) => setGuardar(e.target.value)} /></Campo>
-      <p className="nota">Una ración: <b>{racion.kcal} kcal</b> y <b>{Math.round(racion.proteina)} g</b> de proteína.</p>
+      <p className="nota">Una ración: {racion.kcal} kcal y {Math.round(racion.proteina)} g de proteína.</p>
       <Boton ancho disabled={!valido} onClick={() => {
         const n = nombre.trim();
+        const guarnicionNombre = guarnicion.find((i) => i.gramos > 0)?.nombre.replace(/ \(.*\)$/, "") ?? "Guarnición";
         alGuardar({
           ...inicial, nombre: n, corto: n.length > 24 ? `${n.slice(0, 23)}…` : n, propia: true, salen,
-          ingredientes: items.filter((i) => i.gramos > 0).map((i) => ({ ...i, gramos: Math.round((i.gramos / salen) * 10) / 10 })),
+          componentes: separado
+            ? [{ id: "principal", nombre: n, tipo: "proteina", ingredientes: porRacion(principal) }, { id: "guarnicion", nombre: guarnicionNombre, tipo: "hidratos", ingredientes: porRacion(guarnicion) }]
+            : [{ id: "plato", nombre: n, tipo: "combinado", ingredientes: porRacion(principal) }],
           pasos: pasos.split("\n").map((p) => p.trim()).filter(Boolean),
           minutos: Math.max(5, Number(minutos) || 40), guardar: guardar.trim(),
         });

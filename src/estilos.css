@@ -1,8 +1,8 @@
 /* ============================================================
    Comemos · Adrián — estilos.
    Idea: la puerta de la nevera. Esmalte claro y un solo objeto destacado por
-   pantalla: el táper, con su etiqueta de rotuladora. Lo demás es texto sobre el
-   fondo, separado por líneas finas, sin tarjetas ni etiquetas en mayúsculas.
+   pantalla: en Hoy, "Tu plato" (lo que pesas en la báscula). Lo demás es texto
+   sobre el fondo, separado por líneas finas, sin tarjetas ni etiquetas en mayúsculas.
    Tipos: Bricolage Grotesque (títulos y cifras grandes), Atkinson Hyperlegible
    (texto, se lee bien con las manos en la cocina), JetBrains Mono (gramos y etiquetas).
    ============================================================ */
@@ -86,7 +86,7 @@ h1, h2, h3 { font-family: var(--f-titulo); text-wrap: balance; letter-spacing: -
 }
 .pestanas {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
-  display: grid; grid-template-columns: repeat(4, 1fr);
+  display: grid; grid-template-columns: repeat(5, 1fr);
   padding: 4px max(8px, calc(50vw - 280px)) calc(env(safe-area-inset-bottom, 0px) + 4px);
   background: var(--fondo); border-top: 1px solid var(--linea);
 }
@@ -111,37 +111,60 @@ h1, h2, h3 { font-family: var(--f-titulo); text-wrap: balance; letter-spacing: -
 .cabecera__kcal b { color: var(--tinta); font: 700 17px/1 var(--f-mono); font-variant-numeric: tabular-nums; }
 .cabecera__kcal .medidor { width: 100%; height: 4px; }
 
-/* ---------- el táper: lo único con caja ---------- */
-.taper {
-  position: relative; display: grid; gap: 14px; min-width: 0;
-  margin-top: 10px; padding: 26px 16px 12px;
+/* ---------- tu plato: lo único con caja ---------- */
+.plato {
+  display: grid; gap: 14px; min-width: 0; padding: 16px 16px 14px;
   background: var(--superficie); border: 2px solid var(--tinta); border-radius: var(--r-lg);
 }
-.taper__nombre { font-size: 28px; line-height: 1.05; font-weight: 800; }
-.taper__cuando { font-size: 16px; }
-.taper__otros { display: flex; justify-content: space-between; align-items: center; gap: 4px; flex-wrap: wrap; }
+.plato__cab { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.plato__titulo { font-size: 26px; line-height: 1.05; font-weight: 800; }
+.plato__tapers { display: grid; }
+.pesada { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid var(--linea); cursor: text; }
+.pesada__nombre { display: grid; gap: 1px; min-width: 0; font-weight: 700; line-height: 1.25; }
+.pesada__nombre small { font-weight: 400; color: var(--tinta-2); font-size: 13.5px; }
+.pesada__g { display: inline-flex; align-items: center; gap: 4px; color: var(--tinta-2); }
+.pesada .quitar { width: 30px; }
+.entrada.entrada--g { width: 96px; min-height: 52px; text-align: right; font: 500 24px/1 var(--f-mono); padding: 8px 10px; }
+.entrada.entrada--corta { width: 88px; min-height: 42px; font-size: 18px; }
 
-/* Etiqueta de rotuladora */
-.cinta {
-  position: absolute; top: -13px; left: 14px;
-  padding: 5px 10px 4px; background: var(--cinta); color: var(--sobre-cinta);
-  font: 500 12.5px/1.1 var(--f-mono); letter-spacing: .1em; text-transform: uppercase;
-  border-radius: 3px; transform: rotate(-1.2deg);
+/* Macros del plato: rojo lo que falta, color normal lo que sobra */
+.macros-plato { display: grid; border-top: 1px solid var(--linea); }
+.macro-plato { display: grid; grid-template-columns: 76px auto 1fr; gap: 10px; align-items: baseline; padding: 7px 0; }
+.macro-plato__nombre { font-size: 14px; color: var(--tinta-2); }
+.macro-plato__valor { font: 500 18px/1.1 var(--f-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.macro-plato__valor small { font-size: 13px; color: var(--tinta-2); }
+.macro-plato__dif { display: grid; justify-items: end; text-align: right; font-weight: 700; font-size: 15px; }
+.macro-plato__dif small { font-weight: 400; font-size: 13px; }
+.macro-plato[data-estado="falta"] .macro-plato__valor,
+.macro-plato[data-estado="falta"] .macro-plato__dif { color: var(--tirar); }
+.macro-plato[data-estado="sobra"] .macro-plato__dif { color: var(--tinta); }
+.macro-plato[data-estado="justo"] .macro-plato__dif { color: var(--bien); }
+
+/* Marca del tipo de táper: P, H o P.C. */
+.tipo {
+  display: inline-grid; place-items: center; min-width: 24px; height: 20px; padding: 0 5px; margin-right: 2px;
+  border: 1.5px solid currentColor; border-radius: 5px; font: 500 11.5px/1 var(--f-mono); text-decoration: none; vertical-align: 2px;
 }
-.cinta--ya { background: var(--ya); }
-.cinta--tirar { background: var(--tirar); }
+.tipo[data-tipo="proteina"] { color: var(--cobalto); }
+.tipo[data-tipo="hidratos"] { color: var(--ya); }
+.tipo[data-tipo="combinado"] { color: var(--tinta-2); }
 
-/* Raciones: una casilla por táper */
-.raciones { display: flex; flex-wrap: wrap; gap: 6px; }
-.racion { position: relative; width: 34px; height: 26px; border-radius: 6px 6px 8px 8px; border: 2px solid var(--tinta); display: grid; place-items: center; background: var(--superficie); }
-.racion::before { content: ""; position: absolute; top: -5px; left: 3px; right: 3px; height: 4px; border-radius: 3px 3px 0 0; background: var(--tinta); }
-.racion svg { width: 16px; height: 16px; }
-.racion[data-destino="queda"] { background: var(--cobalto-suave); }
-.racion:not([data-destino="queda"]) { border-color: var(--linea); background: var(--superficie-2); }
-.racion:not([data-destino="queda"])::before { background: var(--linea); }
-.racion[data-destino="comida"] { color: var(--bien); }
-.racion[data-destino="rali"] { color: var(--rali); }
-.racion[data-destino="basura"] { color: var(--basura); }
+.segmento--peque { border: 1px solid var(--linea); border-radius: 999px; overflow: hidden; }
+.segmento.segmento--peque button { min-height: 34px; padding: 0 14px; border-bottom: 0; margin: 0; }
+.segmento.segmento--peque button[aria-selected="true"] { background: var(--tinta); color: var(--fondo); }
+
+/* ---------- semana ---------- */
+.semana__proxima { font-size: 17px; }
+.semana { display: grid; }
+.semana__dia { display: grid; gap: 4px; padding: 12px 0; border-top: 1px solid var(--linea); }
+.semana__dia h2 { display: flex; align-items: baseline; gap: 8px; font-size: 18px; font-weight: 800; }
+.semana__dia h2 small { font: 400 13px/1 var(--f-texto); color: var(--tinta-2); }
+.semana__dia[data-hoy="true"] h2 { color: var(--cobalto); }
+.semana__cocinar { display: flex; align-items: center; gap: 6px; color: var(--cobalto); font-weight: 700; }
+.semana__cocinar svg { width: 18px; height: 18px; }
+.semana__toma { display: grid; grid-template-columns: 70px 1fr; gap: 8px; color: var(--tinta-2); }
+.semana__toma[data-nevera="true"] { color: var(--tinta); }
+.semana__toma span:first-child { color: var(--tinta-2); font-size: 14px; }
 
 /* ---------- bloques sin caja, separados por una línea ---------- */
 .bloque { display: grid; gap: 12px; padding-top: 18px; border-top: 1px solid var(--linea); min-width: 0; }
@@ -234,7 +257,7 @@ details.pliegue[open] { padding-bottom: 8px; }
 .medidor i { display: block; height: 100%; background: var(--cobalto); border-radius: inherit; transition: width .3s ease; }
 .medidor[data-pasado="true"] i { background: var(--ya); }
 .apuntes { display: grid; }
-.apunte { display: grid; grid-template-columns: 48px 1fr auto 36px; gap: 8px; align-items: center; padding: 6px 0; font-size: 15px; }
+.apunte { display: grid; grid-template-columns: 44px 1fr auto 40px 32px; gap: 8px; align-items: center; padding: 6px 0; font-size: 15px; }
 .apunte__hora { font: 500 13px/1 var(--f-mono); color: var(--tinta-2); }
 .apunte__nombre { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .apunte__kcal { font: 500 14px/1 var(--f-mono); }
@@ -247,7 +270,7 @@ details.pliegue[open] { padding-bottom: 8px; }
 .macro[data-lleno="true"] dd { color: var(--bien); }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .chip { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 6px 14px; border-radius: 999px; background: transparent; border: 1px solid var(--linea); font-size: 15px; }
-.chip[data-activo="true"] { background: var(--cobalto); color: var(--sobre-cobalto); border-color: var(--cobalto); font-weight: 700; }
+.chip[data-activo="true"] { background: var(--cobalto-suave); color: var(--cobalto); border-color: var(--cobalto); font-weight: 700; }
 
 /* ---------- cuentas ---------- */
 .cifras { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
@@ -333,5 +356,4 @@ textarea.entrada { min-height: 90px; resize: vertical; }
 @media (max-width: 360px) {
   .macros { grid-template-columns: repeat(2, 1fr); }
   .ingrediente { grid-template-columns: 26px 56px 1fr; }
-  .taper__nombre { font-size: 25px; }
 }
