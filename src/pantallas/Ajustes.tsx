@@ -4,7 +4,7 @@
 import { useRef, useState } from "react";
 import type { PantallaProps } from "../App";
 import { avisoDePrueba, esNativo } from "../avisos/notificaciones";
-import { Boton, Campo, Confirmar, Interruptor, Paso, useAvisar } from "../componentes/base";
+import { Campo, Confirmar, Interruptor, Paso, useAvisar } from "../componentes/base";
 import { AJUSTES_INICIALES, datosIniciales, importar } from "../datos/almacen";
 import { diasSinRespaldo, guardarRespaldo } from "../datos/respaldo";
 import type { Ajustes as TAjustes, Objetivo } from "../nucleo/tipos";
@@ -22,13 +22,11 @@ export function Ajustes({ datos, cambiar }: PantallaProps) {
   const sinCopia = diasSinRespaldo();
 
   return (
-    <div className="pila" style={{ gap: 18 }}>
-      <header className="pila" style={{ gap: 6 }}>
-        <h1 style={{ fontSize: 30, fontWeight: 800 }}>Ajustes</h1>
-      </header>
+    <div className="pantalla">
+      <h1>Ajustes</h1>
 
-      <section className="tarjeta tarjeta--plana">
-        <h2 className="titulo-seccion">Objetivo diario</h2>
+      <section className="bloque">
+        <h2 className="bloque__titulo bloque__titulo--peque">Objetivo diario</h2>
         <div className="rejilla">
           <Campo etiqueta="kcal"><input className="entrada" id="obj-kcal" type="number" inputMode="numeric" value={a.objetivo.kcal} onChange={obj("kcal")} /></Campo>
           <Campo etiqueta="Proteína (g)"><input className="entrada" id="obj-prot" type="number" inputMode="numeric" value={a.objetivo.proteina} onChange={obj("proteina")} /></Campo>
@@ -38,22 +36,22 @@ export function Ajustes({ datos, cambiar }: PantallaProps) {
         </div>
       </section>
 
-      <section className="tarjeta tarjeta--plana">
-        <h2 className="titulo-seccion">Batch</h2>
-        <div className="fila fila--entre">
-          <span>Raciones cada vez</span>
-          <Paso valor={a.raciones} min={1} max={8} alCambiar={(v) => poner({ raciones: v })} texto={(v) => `${v} ${v === 1 ? "ración" : "raciones"}`} />
+      <section className="bloque">
+        <h2 className="bloque__titulo bloque__titulo--peque">Batch</h2>
+        <div className="ajuste">
+          <span>Raciones</span>
+          <Paso valor={a.raciones} min={1} max={8} alCambiar={(v) => poner({ raciones: v })} texto={(v) => String(v)} />
         </div>
-        <div className="campo">
-          <span>Tamaño de cada ración</span>
+        <div className="ajuste">
+          <span>Tamaño de ración</span>
           <div className="chips">
-            {[80, 90, 100, 110, 120, 130].map((v) => <button key={v} type="button" className="chip" data-activo={a.tamano === v} onClick={() => poner({ tamano: v })}>{v} %</button>)}
+            {[80, 90, 100, 110, 120].map((v) => <button key={v} type="button" className="chip" data-activo={a.tamano === v} onClick={() => poner({ tamano: v })}>{v} %</button>)}
           </div>
         </div>
       </section>
 
-      <section className="tarjeta tarjeta--plana">
-        <h2 className="titulo-seccion">Horas</h2>
+      <section className="bloque">
+        <h2 className="bloque__titulo bloque__titulo--peque">Horas</h2>
         <div className="rejilla">
           <Campo etiqueta="Comida"><input className="entrada" id="hora-comida" type="time" value={a.horaComida} onChange={(e) => e.target.value && poner({ horaComida: e.target.value })} /></Campo>
           <Campo etiqueta="Cena"><input className="entrada" id="hora-cena" type="time" value={a.horaCena} onChange={(e) => e.target.value && poner({ horaCena: e.target.value })} /></Campo>
@@ -61,21 +59,22 @@ export function Ajustes({ datos, cambiar }: PantallaProps) {
         </div>
       </section>
 
-      <section className="tarjeta tarjeta--plana">
-        <div className="fila fila--entre">
-          <h2 className="titulo-seccion">Avisos</h2>
+      <section className="bloque">
+        <div className="ajuste" style={{ borderTop: 0, paddingTop: 0 }}>
+          <span>Avisos{esNativo() ? "" : " (solo con la app abierta)"}</span>
           <Interruptor etiqueta="Avisos" activo={a.avisos} alCambiar={(v) => poner({ avisos: v })} />
         </div>
-        {esNativo() ? null : <p className="nota">En la web solo llegan con la app abierta.</p>}
-        <Boton variante="secundario" onClick={() => void avisoDePrueba().then((ok) => avisar({ texto: ok ? "Llegará en 5 segundos" : "Sin permiso para avisos" }))}>Probar un aviso</Boton>
+        <button type="button" className="boton-texto" onClick={() => void avisoDePrueba().then((ok) => avisar({ texto: ok ? "Llegará en 5 segundos" : "Sin permiso para avisos" }))}>Probar un aviso</button>
       </section>
 
-      <section className="tarjeta tarjeta--plana">
-        <h2 className="titulo-seccion">Copia de seguridad</h2>
-        <p className="nota">{sinCopia === null ? "Sin copias todavía" : `Última copia: hace ${sinCopia} ${sinCopia === 1 ? "día" : "días"}`}</p>
-        <div className="acciones__dos">
-          <Boton onClick={() => void guardarRespaldo(datos).then((r) => avisar({ texto: r === "guardado" ? "Copia guardada" : r === "cancelado" ? "Copia cancelada" : "No se ha podido guardar" }))}>Guardar copia</Boton>
-          <Boton variante="secundario" onClick={() => archivo.current?.click()}>Recuperar</Boton>
+      <section className="bloque">
+        <div className="ajuste" style={{ borderTop: 0, paddingTop: 0 }}>
+          <span>Copia de seguridad</span>
+          <span className="nota">{sinCopia === null ? "ninguna" : sinCopia === 0 ? "hoy" : `hace ${sinCopia} ${sinCopia === 1 ? "día" : "días"}`}</span>
+        </div>
+        <div className="fila">
+          <button type="button" className="boton-texto" onClick={() => void guardarRespaldo(datos).then((r) => avisar({ texto: r === "guardado" ? "Copia guardada" : r === "cancelado" ? "Copia cancelada" : "No se ha podido guardar" }))}>Guardar copia</button>
+          <button type="button" className="boton-texto" onClick={() => archivo.current?.click()}>Recuperar</button>
         </div>
         <input ref={archivo} id="archivo-copia" type="file" accept="application/json,.json" hidden onChange={async (e) => {
           const f = e.target.files?.[0];
@@ -86,13 +85,15 @@ export function Ajustes({ datos, cambiar }: PantallaProps) {
         }} />
       </section>
 
-      <section className="pila" style={{ gap: 8 }}>
-        <button type="button" className="enlace enlace--suave" onClick={() => poner({ ...AJUSTES_INICIALES })}>Volver a los ajustes de inicio</button>
-        <button type="button" className="enlace enlace--suave" onClick={() => setBorrar(true)}>Borrar todo</button>
+      <section className="bloque">
+        <div className="fila fila--entre">
+          <button type="button" className="boton-texto boton-texto--suave" onClick={() => poner({ ...AJUSTES_INICIALES })}>Ajustes de inicio</button>
+          <button type="button" className="boton-texto boton-texto--basura" onClick={() => setBorrar(true)}>Borrar todo</button>
+        </div>
         <p className="nota">Comemos · Adrián 0.1</p>
       </section>
 
-      <Confirmar abierta={borrar} cerrar={() => setBorrar(false)} titulo="¿Borrar todo?" texto="Se borran la nevera, las cuentas, tus recetas y los ajustes de este móvil. Si tienes una copia, podrás recuperarla."
+      <Confirmar abierta={borrar} cerrar={() => setBorrar(false)} titulo="¿Borrar todo?" texto="Se borran la nevera, las cuentas, tus recetas y los ajustes de este móvil."
         si="Borrar todo" alConfirmar={() => { cambiar(() => datosIniciales()); setBorrar(false); }} />
     </div>
   );

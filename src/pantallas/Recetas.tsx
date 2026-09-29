@@ -26,15 +26,12 @@ export function Recetas({ datos, cambiar, hoy, irA }: PantallaProps) {
     const t = racionDe(r, datos.ajustes.tamano);
     const u = ultimaVez(datos, r.id);
     return (
-      <button type="button" className="receta-fila" data-apartada={datos.apartadas.includes(r.id)} onClick={() => setViendo(r)}>
-        <span className="pila" style={{ gap: 2, minWidth: 0 }}>
+      <button type="button" className="fila-plana" onClick={() => setViendo(r)}>
+        <span className="fila-plana__txt">
           <b>{r.nombre}</b>
-          <span className="nota">{t.kcal} kcal · {Math.round(t.proteina)} g prot. · {r.minutos} min</span>
+          <span className="nota">{t.kcal} kcal, {r.minutos} min{r.propia ? ", tuya" : ""}</span>
         </span>
-        <span className="pila" style={{ gap: 4, justifyItems: "end" }}>
-          {r.propia ? <span className="etiqueta etiqueta--rali">tuya</span> : null}
-          <span className="etiqueta">{u ? haceDias(u, hoy) : "nunca"}</span>
-        </span>
+        <span className="fila-plana__dcha">{u ? haceDias(u, hoy) : "nunca"}</span>
       </button>
     );
   };
@@ -42,26 +39,24 @@ export function Recetas({ datos, cambiar, hoy, irA }: PantallaProps) {
   const nueva = (): Receta => ({ id: nuevoId("receta"), nombre: "", corto: "", ingredientes: [], pasos: [], minutos: 40, guardar: "3 días en la nevera.", propia: true, salen: 4 });
 
   return (
-    <div className="pila" style={{ gap: 18 }}>
-      <header className="pila" style={{ gap: 6 }}>
-        <h1 style={{ fontSize: 30, fontWeight: 800 }}>Recetas</h1>
-      </header>
+    <div className="pantalla">
+      <h1>Recetas</h1>
 
-      <div className="pila" style={{ gap: 8 }}>
+      <div className="lista-plana">
         {activas.map((r) => <Fila key={r.id} r={r} />)}
       </div>
-      <Boton variante="secundario" onClick={() => setEditando(nueva())}>+ Nueva receta</Boton>
+      <button type="button" className="boton-texto" onClick={() => setEditando(nueva())}>+ Nueva receta</button>
 
       {apartadas.length ? (
-        <div className="pila" style={{ gap: 8 }}>
-          <h2 className="titulo-seccion">Apartadas</h2>
-          {apartadas.map((r) => <Fila key={r.id} r={r} />)}
-        </div>
+        <details className="pliegue">
+          <summary><span>Apartadas</span><span className="nota">{apartadas.length}</span></summary>
+          <div className="lista-plana">{apartadas.map((r) => <Fila key={r.id} r={r} />)}</div>
+        </details>
       ) : null}
 
       <Hoja abierta={Boolean(viendo)} cerrar={() => setViendo(null)} titulo={viendo?.nombre ?? ""}>
         {viendo ? <DetalleReceta r={viendo} raciones={datos.ajustes.raciones} tamano={datos.ajustes.tamano} apartada={datos.apartadas.includes(viendo.id)}
-          alProponer={() => { cambiar((d) => apartar(proponer(d, viendo.id), viendo.id, false)); setViendo(null); irA("hoy"); avisar({ texto: `Propuesta: ${viendo.corto}` }); }}
+          alProponer={() => { cambiar((d) => apartar(proponer(d, viendo.id), viendo.id, false)); setViendo(null); irA("hoy"); avisar({ texto: `Toca ${viendo.corto.toLowerCase()}` }); }}
           alApartar={(a) => { cambiar((d) => apartar(d, viendo.id, a)); setViendo(null); avisar({ texto: a ? `No te propondré ${viendo.corto}` : `${viendo.corto} vuelve a la lista` }); }}
           alEditar={() => { setEditando(viendo); setViendo(null); }}
           alBorrar={() => { setBorrando(viendo); setViendo(null); }} /> : null}
@@ -91,9 +86,7 @@ function DetalleReceta({ r, raciones, tamano, apartada, alProponer, alApartar, a
   const t = racionDe(r, tamano);
   return (
     <>
-      <p className="macros-linea">
-        <span><b>{t.kcal}</b> kcal/ración</span><span><b>{Math.round(t.proteina)}</b> g prot.</span><span><b>{r.minutos}</b> min</span>
-      </p>
+      <p className="nota">{r.minutos} min. Cada ración, {t.kcal} kcal y {Math.round(t.proteina)} g de proteína.</p>
       <details className="pliegue">
         <summary><span>Ingredientes</span><span className="nota">{raciones} raciones</span></summary>
         <ul className="lista-simple">
@@ -104,17 +97,17 @@ function DetalleReceta({ r, raciones, tamano, apartada, alProponer, alApartar, a
         <details className="pliegue">
           <summary><span>Pasos</span></summary>
           <ol className="pasos">{r.pasos.map((p) => <li key={p}>{p}</li>)}</ol>
-          {r.guardar ? <p className="nota" style={{ marginTop: 10 }}>{r.guardar}</p> : null}
+          {r.guardar ? <p className="nota">{r.guardar}</p> : null}
         </details>
       ) : null}
-      <div className="acciones">
-        <Boton ancho onClick={alProponer}>Proponérmela ahora</Boton>
-        <Boton variante="secundario" ancho onClick={() => alApartar(!apartada)}>{apartada ? "Vuelve a proponérmela" : "No me la propongas"}</Boton>
+      <Boton ancho onClick={alProponer}>Cocinar esta</Boton>
+      <div className="fila fila--entre">
+        <button type="button" className="boton-texto boton-texto--suave" onClick={() => alApartar(!apartada)}>{apartada ? "Volver a proponérmela" : "No me la propongas"}</button>
         {r.propia ? (
-          <div className="acciones__dos">
-            <Boton variante="secundario" onClick={alEditar}>Editar</Boton>
-            <Boton variante="peligro" onClick={alBorrar}>Borrar</Boton>
-          </div>
+          <span className="fila">
+            <button type="button" className="boton-texto" onClick={alEditar}>Editar</button>
+            <button type="button" className="boton-texto boton-texto--basura" onClick={alBorrar}>Borrar</button>
+          </span>
         ) : null}
       </div>
     </>
@@ -142,11 +135,11 @@ function EditorReceta({ inicial, datos, alGuardar, alGuardarAlimento }: {
         <span>Salen</span>
         <Paso valor={salen} min={1} max={12} alCambiar={setSalen} texto={(v) => `${v} ${v === 1 ? "ración" : "raciones"}`} />
       </div>
-      <h3 className="titulo-seccion">Ingredientes de toda la olla</h3>
+      <h3 className="bloque__titulo bloque__titulo--peque">Ingredientes de toda la olla</h3>
       <ListaItems items={items} cambiar={setItems} divisor={salen} etiquetaTotal="Por ración" />
       {buscando ? (
         <Buscador guardados={datos.alimentos} alGuardarAlimento={alGuardarAlimento} alAnadir={(i) => { setItems((l) => [...l, i]); setBuscando(false); }} />
-      ) : <Boton variante="secundario" onClick={() => setBuscando(true)}>+ Ingrediente</Boton>}
+      ) : <button type="button" className="boton-texto" onClick={() => setBuscando(true)}>+ Ingrediente</button>}
       <Campo etiqueta="Pasos (uno por línea)"><textarea className="entrada" id="receta-pasos" rows={5} value={pasos} onChange={(e) => setPasos(e.target.value)} /></Campo>
       <div className="rejilla">
         <Campo etiqueta="Minutos"><input className="entrada" id="receta-minutos" inputMode="numeric" value={minutos} onChange={(e) => setMinutos(e.target.value)} /></Campo>

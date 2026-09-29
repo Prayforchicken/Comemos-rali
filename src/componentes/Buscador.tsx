@@ -59,8 +59,8 @@ export function Buscador({ guardados, alAnadir, alGuardarAlimento }: {
 
   const Fila = ({ a }: { a: Alimento }) => (
     <button type="button" className="alimento-op" onClick={() => setElegido(a)}>
-      <span><b>{a.nombre}</b><small>{a.n.kcal} kcal · {Math.round(a.n.proteina)} g prot. por 100 g{a.porcion ? ` · ${a.porcion.nombre}` : ""}</small></span>
-      {FUENTE[a.fuente] ? <span className="etiqueta">{FUENTE[a.fuente]}</span> : null}
+      <span><b>{a.nombre}</b><small>{a.n.kcal} kcal por 100 g</small></span>
+      {FUENTE[a.fuente] ? <span className="nota">{FUENTE[a.fuente]}</span> : null}
     </button>
   );
 
@@ -77,7 +77,7 @@ export function Buscador({ guardados, alAnadir, alGuardarAlimento }: {
           <div className="alimentos-op">{wger.lista.map((a) => <Fila key={a.id} a={a} />)}</div>
         </>
       ) : null}
-      <button type="button" className="enlace" onClick={() => setCrear(true)}>Crear un alimento a mano</button>
+      <button type="button" className="boton-texto" onClick={() => setCrear(true)}>Crear un alimento a mano</button>
     </div>
   );
 }
@@ -94,10 +94,10 @@ function Gramos({ a, volver, alAnadir }: { a: Alimento; volver: () => void; alAn
         {[50, 100, 200].map((x) => <button key={x} type="button" className="chip" data-activo={n === x} onClick={() => setG(String(x))}>{x} g</button>)}
       </div>
       <Campo etiqueta="Gramos"><input className="entrada" id="gramos" type="number" inputMode="decimal" min={1} value={g} onChange={(e) => setG(e.target.value)} /></Campo>
-      <p className="macros-linea"><span><b>{t.kcal}</b> kcal</span><span><b>{Math.round(t.proteina)}</b> g prot.</span><span><b>{Math.round(t.carbos)}</b> g hidratos</span><span><b>{Math.round(t.grasa)}</b> g grasa</span></p>
+      <p className="nota">{t.kcal} kcal y {Math.round(t.proteina)} g de proteína.</p>
       <div className="acciones">
         <Boton ancho disabled={n <= 0} onClick={() => alAnadir(Math.round(n))}>Añadir</Boton>
-        <button type="button" className="enlace" onClick={volver}>Volver a buscar</button>
+        <button type="button" className="boton-texto boton-texto--suave" onClick={volver}>Volver a buscar</button>
       </div>
     </div>
   );
@@ -127,7 +127,7 @@ function CrearAlimento({ nombreInicial, cancelar, alCrear }: { nombreInicial: st
           n: { kcal: n(a.kcal), proteina: n(a.proteina), carbos: n(a.carbos), grasa: n(a.grasa), fibra: n(a.fibra) },
           porcion: n(a.gramos) ? { nombre: "1 ración", gramos: n(a.gramos) } : undefined,
         })}>Guardar alimento</Boton>
-        <button type="button" className="enlace enlace--suave" onClick={cancelar}>Cancelar</button>
+        <button type="button" className="boton-texto boton-texto--suave" onClick={cancelar}>Cancelar</button>
       </div>
     </div>
   );
@@ -151,7 +151,7 @@ export function ListaItems({ items, cambiar, divisor = 1, etiquetaTotal = "Total
       ))}
       <div className="items__total">
         <b>{etiquetaTotal}</b>
-        <span className="mono">{Math.round(t.kcal / d)} kcal · {Math.round(t.proteina / d)} P · {Math.round(t.carbos / d)} HC · {Math.round(t.grasa / d)} G</span>
+        <span className="mono">{Math.round(t.kcal / d)} kcal, {Math.round(t.proteina / d)} g prot.</span>
       </div>
     </div>
   );

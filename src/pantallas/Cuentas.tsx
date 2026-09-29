@@ -24,25 +24,19 @@ export function Cuentas({ datos, cambiar, hoy, ahora }: PantallaProps) {
   const lotes = [...datos.lotes].sort((a, b) => b.hecho.localeCompare(a.hecho) || b.creado.localeCompare(a.creado));
 
   return (
-    <div className="pila" style={{ gap: 18 }}>
-      <header className="pila" style={{ gap: 6 }}>
-        <h1 style={{ fontSize: 30, fontWeight: 800 }}>Cuentas</h1>
-      </header>
-
+    <div className="pantalla">
+      <h1>Cuentas</h1>
       <Segmento etiqueta="Periodo" valor={periodo} alCambiar={setPeriodo} opciones={[{ v: "semana", t: "7 días" }, { v: "mes", t: "30 días" }, { v: "siempre", t: "Siempre" }]} />
 
-      <div className="trio">
-        <div><span>Comidas</span><b className="dato-grande comida">{r.comida}</b></div>
-        <div><span>Para Rali</span><b className="dato-grande rali">{r.rali}</b></div>
-        <div><span>A la basura</span><b className="dato-grande basura">{r.basura}</b></div>
+      <div className="cifras">
+        <div className="comida"><b>{r.comida}</b><span>comidas</span></div>
+        <div className="rali"><b>{r.rali}</b><span>para Rali</span></div>
+        <div className="basura"><b>{r.basura}</b><span>a la basura</span></div>
       </div>
-      <p className="nota">
-        {r.total ? <>{r.pctBasura} % a la basura · {r.lotes} batch</> : "Sin raciones en este periodo"}
-      </p>
+      {r.total ? <p className="nota">Tiras el {r.pctBasura} % de lo que cocinas. {r.lotes === 1 ? "1 batch" : `${r.lotes} batch`} en este periodo.</p> : null}
 
       {r.recetas.length ? (
-        <section className="tarjeta tarjeta--plana">
-          <h2 className="titulo-seccion">Por receta</h2>
+        <section className="bloque">
           <div className="tabla-scroll">
             <table className="tabla">
               <thead><tr><th>Receta</th><th>Veces</th><th>Comidas</th><th>Rali</th><th>Basura</th></tr></thead>
@@ -56,11 +50,8 @@ export function Cuentas({ datos, cambiar, hoy, ahora }: PantallaProps) {
         </section>
       ) : null}
 
-      <section className="tarjeta tarjeta--plana">
-        <div className="fila fila--entre">
-          <h2 className="titulo-seccion">Últimos 7 días</h2>
-          <span className="nota">objetivo {objetivo} kcal</span>
-        </div>
+      <section className="bloque">
+        <h2 className="bloque__titulo bloque__titulo--peque">Kcal por día</h2>
         <div className="dias">
           {dias.map((d) => (
             <div key={d.fecha} className="dia">
@@ -75,24 +66,24 @@ export function Cuentas({ datos, cambiar, hoy, ahora }: PantallaProps) {
         </div>
       </section>
 
-      <section className="tarjeta tarjeta--plana">
-        <h2 className="titulo-seccion">Tápers</h2>
+      <section className="bloque">
+        <h2 className="bloque__titulo bloque__titulo--peque">Tápers</h2>
         {lotes.length ? (
-          <div>
+          <div className="lista-plana">
             {lotes.slice(0, 30).map((l) => {
               const c = { comida: 0, rali: 0, basura: 0 };
               l.salidas.forEach((s) => (c[s.destino] += 1));
               const q = quedan(l);
+              const partes = [`${c.comida} comidas`, c.rali ? `${c.rali} para Rali` : "", c.basura ? `${c.basura} a la basura` : "", q ? `quedan ${q}` : ""].filter(Boolean);
               return (
-                <button key={l.id} type="button" className="lote-fila" onClick={() => setDetalle(l)}>
-                  <b>{l.nombre}</b>
-                  <span className="nota mono">{fechaCorta(l.hecho)}</span>
-                  <span className="nota">{c.comida} comidas · {c.rali} Rali · {c.basura} basura{q ? ` · quedan ${q}` : ""}</span>
+                <button key={l.id} type="button" className="fila-plana" onClick={() => setDetalle(l)}>
+                  <span className="fila-plana__txt"><b>{l.nombre}</b><span className="nota">{partes.join(", ")}</span></span>
+                  <span className="fila-plana__dcha">{fechaCorta(l.hecho)}</span>
                 </button>
               );
             })}
           </div>
-        ) : <p className="nota">Todavía no hay tápers.</p>}
+        ) : <p className="vacio">Todavía no hay tápers.</p>}
       </section>
 
       <LoteDetalle lote={detalle} datos={datos} cambiar={cambiar} cerrar={() => setDetalle(null)} ahora={ahora} />
