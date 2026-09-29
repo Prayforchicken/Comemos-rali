@@ -1,0 +1,12 @@
+{
+  "appId": "es.adrian.comemosadrian",
+  "appName": "Comemos Adrián",
+  "webDir": "dist",
+  "android": { "backgroundColor": "#ECEFEA" },
+  "plugins": {
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_taper",
+      "iconColor": "#2346D8"
+    }
+  }
+}

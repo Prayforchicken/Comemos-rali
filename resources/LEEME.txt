@@ -1,0 +1,1 @@
+Iconos generados con `npm run iconos`. En la compilación de la APK se convierten con @capacitor/assets.
