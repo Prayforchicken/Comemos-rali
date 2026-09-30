@@ -1,9 +1,8 @@
 /* ============================================================
    El plato de esta toma: gramos pesados de cada táper frente a lo que toca.
    - Lo que toca en una toma = objetivo diario × reparto (Ajustes).
-   - Por cada macro: si falta, cuántos gramos faltan (en rojo en la pantalla);
-     si sobra, cuántos sobran. Si falta proteína o hidratos, cuántos gramos
-     más de qué táper lo cubrirían.
+   - Por cada macro: cuánto falta (en rojo en la pantalla) o cuánto sobra.
+   - `recomendar`: cuántos gramos servirse de cada táper para acercarse a lo que toca.
    ============================================================ */
 import { totales } from "../alimentos/nutricion";
 import type { Item, Totales } from "../alimentos/tipos";
@@ -45,33 +44,84 @@ export interface Linea {
   valor: number; objetivo: number;
   estado: "falta" | "justo" | "sobra";
   diferencia: number;
-  /** "+85 g de curry": cuánto más de qué táper cubre lo que falta (proteína e hidratos). */
-  pista: string | null;
 }
 
-/** `plato`: gramos de cada táper. `otros`: lo que no sale de la nevera (pizza, pan, fruta…). */
-export function calcular(d: Datos, plato: { lote: Lote; gramos: number }[], m: Momento, otros: Item[] = []): { total: Totales; lineas: Linea[] } {
-  const total = plato.reduce<Totales>((s, x) => {
+type Macros = Record<Clave, number>;
+const sumaMacros = (plato: { lote: Lote; gramos: number }[], otros: Item[]): Totales =>
+  plato.reduce<Totales>((s, x) => {
     const t = macrosDe(x.lote, x.gramos);
     return { gramos: s.gramos + x.gramos, kcal: s.kcal + t.kcal, proteina: s.proteina + t.proteina, carbos: s.carbos + t.carbos, grasa: s.grasa + t.grasa, fibra: s.fibra + t.fibra };
   }, totales(otros));
+
+/** `plato`: gramos de cada táper. `otros`: lo que no sale de la nevera (pizza, pan, fruta…). */
+export function calcular(d: Datos, plato: { lote: Lote; gramos: number }[], m: Momento, otros: Item[] = []): { total: Totales; lineas: Linea[] } {
+  const total = sumaMacros(plato, otros);
   const obj = objetivoToma(d, m);
   const lineas = MACROS.map(({ clave, nombre, unidad }): Linea => {
     const valor = Math.round(total[clave]);
     const objetivo = obj[clave];
     const dif = valor - objetivo;
     const estado = Math.abs(dif) <= objetivo * MARGEN ? "justo" : dif < 0 ? "falta" : "sobra";
-    let pista: string | null = null;
-    if (estado === "falta" && (clave === "proteina" || clave === "carbos")) {
-      // El táper del plato que más aporta de ese macro por gramo.
-      const mejor = plato.map((x) => x.lote).filter((l) => quedan(l) > 0).sort((a, b) => por100(b)[clave] - por100(a)[clave])[0];
-      const cada100 = mejor ? por100(mejor)[clave] : 0;
-      if (mejor && cada100 >= 3) {
-        const g = Math.ceil((-dif / cada100) * 100 / 5) * 5;
-        pista = `+${g} g de ${mejor.nombre.toLowerCase()}`;
-      }
-    }
-    return { clave, nombre, unidad, valor, objetivo, estado, diferencia: Math.abs(dif), pista };
+    return { clave, nombre, unidad, valor, objetivo, estado, diferencia: Math.abs(dif) };
   });
   return { total, lineas };
 }
+
+/* ---------------- cuánto servirse ---------------- */
+
+/** Cuánto pesa cada macro al buscar el plato: las kcal mandan, luego la proteína. */
+const PESO: Macros = { kcal: 3, proteina: 2, carbos: 1, grasa: 0.5 };
+/**
+ * Cuánto tira el reparto "de siempre" (cada táper en proporción a lo que queda en él, para que
+ * se acaben a la vez). Sin esto, si el guiso ya cuadra solo, la guarnición se quedaría a 0 g.
+ */
+const EQUILIBRIO = 2;
+
+/**
+ * Gramos de cada táper para acercarse a lo que toca en esta toma.
+ * `fijo`: macros de lo que no sale de un táper (otra cosa), que se descuentan de lo que toca.
+ * `pesados`: gramos ya pesados de algunos tápers; se respetan y el resto se ajusta a ellos.
+ * Minimiza el error de cada macro (relativo a lo que toca, con PESO) más un término que tira
+ * hacia el reparto proporcional. Nunca más de lo que queda en el táper. Redondeado a 5 g.
+ */
+export function recomendar(d: Datos, lotes: Lote[], m: Momento, fijo: Omit<Totales, "gramos" | "fibra"> = { kcal: 0, proteina: 0, carbos: 0, grasa: 0 }, pesados: Record<string, number> = {}): Record<string, number> {
+  const obj = objetivoToma(d, m);
+  const claves = MACROS.map((x) => x.clave);
+  const falta = Object.fromEntries(claves.map((k) => [k, obj[k] - fijo[k]])) as Macros;
+  const vivos = lotes.filter((l) => quedan(l) > 0 && por100(l).kcal > 0);
+  const res: Record<string, number> = Object.fromEntries(lotes.map((l) => [l.id, 0]));
+  if (!vivos.length || falta.kcal <= obj.kcal * MARGEN) return res;
+
+  const a = vivos.map((l) => { const n = por100(l); return Object.fromEntries(claves.map((k) => [k, n[k] / 100])) as Macros; });
+  const tope = vivos.map(quedan);
+  // Reparto proporcional a lo que queda, escalado a las kcal que faltan.
+  const kcalQuedan = vivos.reduce((s, l, i) => s + tope[i] * a[i].kcal, 0);
+  const base = tope.map((q) => Math.min(q, q * (falta.kcal / kcalQuedan)));
+  const Q = Math.max(1, base.reduce((s, x) => s + x, 0));
+
+  // Descenso por coordenadas: el problema es cuadrático y con límites, converge solo.
+  const libre = vivos.map((l) => !(pesados[l.id] > 0));
+  const g = vivos.map((l, i) => (libre[i] ? base[i] : pesados[l.id]));
+  const aporte = (k: Clave) => g.reduce((s, x, i) => s + x * a[i][k], 0);
+  for (let vuelta = 0; vuelta < 200; vuelta++) {
+    for (let i = 0; i < g.length; i++) {
+      if (!libre[i]) continue;
+      let grad = (EQUILIBRIO * (g[i] - base[i])) / (Q * Q);
+      let curva = EQUILIBRIO / (Q * Q);
+      for (const k of claves) {
+        const r = (aporte(k) - falta[k]) / obj[k];
+        grad += (PESO[k] * a[i][k] * r) / obj[k];
+        curva += (PESO[k] * a[i][k] ** 2) / obj[k] ** 2;
+      }
+      g[i] = Math.max(0, Math.min(tope[i], g[i] - grad / curva));
+    }
+  }
+  vivos.forEach((l, i) => { res[l.id] = libre[i] ? Math.min(tope[i], Math.round(g[i] / 5) * 5) : g[i]; });
+  return res;
+}
+
+/** Suma de macros de lo que ya está en el plato (para `recomendar`). */
+export const macrosFijos = (plato: { lote: Lote; gramos: number }[], otros: Item[]) => {
+  const t = sumaMacros(plato, otros);
+  return { kcal: t.kcal, proteina: t.proteina, carbos: t.carbos, grasa: t.grasa };
+};

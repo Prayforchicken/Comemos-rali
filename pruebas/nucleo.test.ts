@@ -7,7 +7,7 @@ import { resumen } from "../src/nucleo/cuentas";
 import { anadirExtra, gramosPorReceta, totalDelDia } from "../src/nucleo/dia";
 import { anadirAMano, cocinar, enNevera, frescura, macrosDe, moverCaducidad, pesarQueda, por100, primeraTomaLibre, proyectar, quedan, sacar, tamanoDe } from "../src/nucleo/lotes";
 import { cuentaAtras } from "../src/nucleo/fechas";
-import { calcular, objetivoToma, sugerencia } from "../src/nucleo/plato";
+import { calcular, macrosFijos, objetivoToma, recomendar, sugerencia } from "../src/nucleo/plato";
 import { candidatas, enUnidades, lista, otraIdea, propuestaActual } from "../src/nucleo/propuesta";
 import { planSemana } from "../src/nucleo/semana";
 import { RECETAS } from "../src/recetas/recetas";
@@ -55,7 +55,7 @@ test("solo cuentan calorías los gramos que te comes, y se guardan por receta", 
   assert.deepEqual([r.comida, r.rali, r.basura, r.pctBasura], [400, 300, 100, 13]);
 });
 
-test("el plato: falta en rojo, sobra en blanco y una pista de gramos", () => {
+test("el plato: falta en rojo, sobra en blanco", () => {
   const d = cocinar(datosIniciales(), curry, 4, hora("2026-09-29T19:30:00"));
   const [p, h] = d.lotes;
   assert.deepEqual(sugerencia(d, "2026-09-29"), [h.id, p.id]); // el arroz caduca antes
@@ -64,9 +64,32 @@ test("el plato: falta en rojo, sobra en blanco y una pista de gramos", () => {
   const prot = poco.lineas.find((l) => l.clave === "proteina")!;
   assert.equal(prot.estado, "falta");
   assert.equal(prot.objetivo, objetivoToma(d, "cena").proteina);
-  assert.match(prot.pista ?? "", /^\+\d+ g de curry de garbanzos$/);
   const mucho = calcular(d, [{ lote: p, gramos: 900 }, { lote: h, gramos: 600 }], "cena");
   assert.equal(mucho.lineas.find((l) => l.clave === "kcal")!.estado, "sobra");
+});
+
+test("cuánto servirse: llega a las kcal, más guiso que arroz y nunca más de lo que queda", () => {
+  const d = cocinar(datosIniciales(), curry, 4, hora("2026-09-29T19:30:00"));
+  const [p, h] = d.lotes;
+  const rec = recomendar(d, [p, h], "comida");
+  const kcal = calcular(d, [{ lote: p, gramos: rec[p.id] }, { lote: h, gramos: rec[h.id] }], "comida").lineas[0];
+  assert.equal(kcal.estado, "justo");
+  assert.ok(rec[h.id] > 0 && rec[p.id] > rec[h.id] * 3, JSON.stringify(rec));
+  assert.equal(rec[p.id] % 5, 0);
+  // Con 400 g de curry ya pesados, el arroz sube para compensar.
+  const conCurry = recomendar(d, [p, h], "comida", undefined, { [p.id]: 400 });
+  assert.equal(conCurry[p.id], 400);
+  assert.ok(conCurry[h.id] > rec[h.id]);
+  // Si pesas justo lo recomendado de uno, el otro no cambia.
+  assert.equal(recomendar(d, [p, h], "comida", undefined, { [h.id]: rec[h.id] })[p.id], rec[p.id]);
+  // Otra cosa en el plato (fuera de la nevera) baja lo que toca de los tápers.
+  const conPan = recomendar(d, [p, h], "comida", macrosFijos([], [{ alimentoId: "pan", nombre: "Pan", gramos: 100, n: { kcal: 260, proteina: 9, carbos: 50, grasa: 3, fibra: 3 } }]));
+  assert.ok(conPan[p.id] + conPan[h.id] < rec[p.id] + rec[h.id]);
+  // Un táper casi vacío: como mucho lo que queda.
+  const casi = sacar(d, h.id, "comida", quedan(h) - 50, hora("2026-09-29T21:00:00")).datos;
+  assert.ok(recomendar(casi, [casi.lotes[1]], "comida")[h.id] <= 50);
+  // Si otra cosa ya cubre la comida, no hace falta nada.
+  assert.equal(recomendar(d, [p], "comida", { kcal: 900, proteina: 50, carbos: 100, grasa: 30 })[p.id], 0);
 });
 
 test("un batch hecho por la tarde empieza en la cena de hoy", () => {

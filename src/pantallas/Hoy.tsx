@@ -20,7 +20,7 @@ import { compartirTexto } from "../datos/respaldo";
 import { anadirExtra, apuntesDelDia, quitarExtra, totalDelDia } from "../nucleo/dia";
 import { cuentaAtras, diasEntre, fechaCorta, fechaDe, fechaLarga, horaDe, MOMENTO, pesoTexto, sumarDias } from "../nucleo/fechas";
 import { anadirAMano, borrarLote, cocinar, deshacer, enNevera, frescura, momentoAhora, por100, quedan, sacar, tamanoDe, tomasDeNuevoBatch, type Toma } from "../nucleo/lotes";
-import { calcular, sugerencia } from "../nucleo/plato";
+import { calcular, macrosFijos, recomendar, sugerencia } from "../nucleo/plato";
 import { candidatas, lista, loQueTengo, marcar, propuestaActual, proponer, textoCompra } from "../nucleo/propuesta";
 import { duraDe, formaDe, racionDe, TIPO } from "../nucleo/receta";
 import { planSemana } from "../nucleo/semana";
@@ -115,6 +115,11 @@ function Plato({ datos, cambiar, ahora }: PantallaProps) {
   const fuera = otros.map((o) => ({ ...o.item, gramos: num(o.id) }));
   const { lineas } = calcular(datos, plato, momento, fuera);
   const hayGramos = plato.some((x) => x.gramos > 0) || fuera.some((i) => i.gramos > 0);
+  // Cuánto servirse: `ideal` para el plato entero; `toca` para lo que aún no has pesado, respetando lo pesado.
+  const lotes = plato.map((x) => x.lote);
+  const otrosMacros = macrosFijos([], fuera);
+  const ideal = recomendar(datos, lotes, momento, otrosMacros);
+  const toca = recomendar(datos, lotes, momento, otrosMacros, Object.fromEntries(plato.map((x) => [x.lote.id, x.gramos])));
 
   const alternar = (id: string) => setElegidos((e) => (e.includes(id) ? e.filter((x) => x !== id) : [...e, id]));
   const anadirOtro = (item: Item) => {
@@ -123,13 +128,29 @@ function Plato({ datos, cambiar, ahora }: PantallaProps) {
     setGramos((g) => ({ ...g, [id]: String(item.gramos || 100) }));
     setBuscando(false);
   };
-  const campo = (id: string, nombre: string) => (
+  const poner = (id: string, g: number) => setGramos((x) => ({ ...x, [id]: String(g) }));
+  /** Debajo del nombre: cuánto te toca (tocar lo apunta) o, ya pesado, cuánto falta o sobra. */
+  const guia = (lote: Lote, g: number) => {
+    if (g > 0) {
+      const dif = g - (ideal[lote.id] ?? 0);
+      const estado = Math.abs(dif) <= Math.max(10, (ideal[lote.id] ?? 0) * 0.05) ? "justo" : dif < 0 ? "falta" : "sobra";
+      return <small className="pesada__guia" data-estado={estado}>{estado === "justo" ? "Justo" : `${estado === "falta" ? "Faltan" : "Sobran"} ${Math.abs(Math.round(dif))} g`}</small>;
+    }
+    const r = toca[lote.id] ?? 0;
+    if (!r) return <small className="pesada__guia">No te hace falta</small>;
+    return (
+      <button type="button" className="pesada__toca" onClick={() => poner(lote.id, r)}>
+        {r >= quedan(lote) - 5 ? `Te toca lo que queda, ${r} g` : `Te tocan ${r} g`}
+      </button>
+    );
+  };
+  const campo = (id: string, nombre: string, sugerido = 0) => (
     <span className="pesada__g">
-      <input className="entrada entrada--g" id={`g-${id}`} type="text" inputMode="numeric" placeholder="0" value={gramos[id] ?? ""}
+      <input className="entrada entrada--g" id={`g-${id}`} aria-label={`Gramos de ${nombre}`} type="text" inputMode="numeric" placeholder={sugerido ? String(sugerido) : "0"} value={gramos[id] ?? ""}
         onChange={(e) => setGramos((g) => ({ ...g, [id]: e.target.value.replace(/[^\d.,]/g, "") }))} />
       <span>g</span>
       <button type="button" className="quitar" aria-label={`Quitar ${nombre} del plato`}
-        onClick={(e) => { e.preventDefault(); if (id.startsWith("otro-")) setOtros((l) => l.filter((o) => o.id !== id)); else alternar(id); }}>×</button>
+        onClick={() => { if (id.startsWith("otro-")) setOtros((l) => l.filter((o) => o.id !== id)); else alternar(id); }}>×</button>
     </span>
   );
 
@@ -163,17 +184,17 @@ function Plato({ datos, cambiar, ahora }: PantallaProps) {
         </div>
       </div>
       <div className="plato__tapers">
-        {plato.map(({ lote }) => (
-          <label key={lote.id} className="pesada">
-            <span className="pesada__nombre"><span><TipoMarca tipo={lote.tipo} /> {lote.nombre}</span><small>quedan {pesoTexto(quedan(lote))}</small></span>
-            {campo(lote.id, lote.nombre)}
-          </label>
+        {plato.map(({ lote, gramos: g }) => (
+          <div key={lote.id} className="pesada">
+            <span className="pesada__nombre"><span><TipoMarca tipo={lote.tipo} /> {lote.nombre}</span>{guia(lote, g)}</span>
+            {campo(lote.id, lote.nombre, toca[lote.id])}
+          </div>
         ))}
         {otros.map((o) => (
-          <label key={o.id} className="pesada">
+          <div key={o.id} className="pesada">
             <span className="pesada__nombre"><span>{o.item.nombre}</span><small>fuera de la nevera</small></span>
             {campo(o.id, o.item.nombre)}
-          </label>
+          </div>
         ))}
       </div>
 
@@ -191,7 +212,6 @@ function Plato({ datos, cambiar, ahora }: PantallaProps) {
             <span className="macro-plato__valor">{l.valor}<small> / {l.objetivo}</small></span>
             <span className="macro-plato__dif">
               {!hayGramos ? "" : l.estado === "justo" ? "justo" : `${l.estado === "falta" ? "faltan" : "sobran"} ${l.diferencia}${l.unidad === "g" ? " g" : ""}`}
-              {hayGramos && l.pista ? <small>{l.pista}</small> : null}
             </span>
           </div>
         ))}

@@ -11,9 +11,12 @@ Web instalable (PWA, en Vercel) y APK de Android con avisos.
 2. **"Lo hago".** Cada parte de la receta va a su táper, con su tipo:
    **P** (plato de proteína, el curry), **H** (guarnición de hidratos, el arroz) o **P.C.** (plato combinado,
    la boloñesa con la pasta). La app estima cuánto pesa lo cocinado; lo corriges pesando el táper.
-3. **Tu plato.** Eliges los tápers, pones el plato en la báscula y escribes los gramos de cada uno.
-   Al momento ves kcal, proteína, hidratos y grasa frente a lo que toca en esa comida o cena:
-   en rojo lo que falta (y cuántos gramos más de qué táper lo cubren), en blanco lo que sobra.
+3. **Tu plato.** Debajo de cada táper, cuánto servirte ("Te tocan 645 g"; tocarlo lo apunta).
+   La app busca los gramos de cada táper que más se acercan a lo que toca en esa comida o cena
+   (primero las kcal, luego la proteína), sin dejar la guarnición a cero para que los tápers se acaben
+   a la par. Pones el plato en la báscula y escribes lo que has servido: en cada táper, "Faltan 45 g" en rojo,
+   "Sobran 20 g" en blanco o "Justo"; lo que aún no has pesado se recalcula con lo ya servido.
+   Abajo, kcal, proteína, hidratos y grasa frente a lo que toca.
    "Apuntar" descuenta los gramos del táper y guarda cuánto comiste de cada cosa ese día.
    Si comes otra cosa (pizza, un bocata…), quitas los tápers con × y añades "+ Otra cosa":
    cuenta en los macros y esa comida o cena queda hecha sin tocar la nevera.
@@ -42,7 +45,7 @@ src/
     tipos.ts       Qué se guarda: Receta (con sus partes), Lote (un táper), Salida (gramos que salen), Ajustes.
     receta.ts      Tipos P / H / P.C., macros de una ración y peso estimado de lo cocinado.
     lotes.ts       La nevera: cocinar, sacar gramos, pesar, caducidad y a qué tomas da lo que hay.
-    plato.ts       Tu plato: macros de lo pesado frente a lo que toca, qué falta y qué sobra.
+    plato.ts       Tu plato: cuánto servirte de cada táper (recomendar) y macros de lo pesado frente a lo que toca.
     semana.ts      Plan de 7 días y cuándo volver a cocinar.
     propuesta.ts   Qué cocinar: turno de recetas y lista de ingredientes con unidades.
     dia.ts         Lo comido en un día (gramos de los tápers + extras).

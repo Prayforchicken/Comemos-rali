@@ -119,12 +119,20 @@ h1, h2, h3 { font-family: var(--f-titulo); text-wrap: balance; letter-spacing: -
 .plato__cab { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
 .plato__titulo { font-size: 26px; line-height: 1.05; font-weight: 800; }
 .plato__tapers { display: grid; }
-.pesada { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid var(--linea); cursor: text; }
-.pesada__nombre { display: grid; gap: 1px; min-width: 0; font-weight: 700; line-height: 1.25; }
+.pesada { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid var(--linea); }
+.pesada__nombre { display: grid; gap: 1px; min-width: 0; font-weight: 700; line-height: 1.25; justify-items: start; }
 .pesada__nombre small { font-weight: 400; color: var(--tinta-2); font-size: 13.5px; }
+/* Cuánto te toca: se toca para apuntarlo. Ya pesado: falta en rojo, sobra en blanco, justo en verde. */
+.pesada__toca { border: 0; background: none; padding: 6px 0 2px; margin: -4px 0 -2px; color: var(--cobalto); font: 700 14.5px/1.2 var(--f-texto); text-align: left; }
+.pesada__nombre .pesada__guia { font-size: 14.5px; }
+.pesada__nombre .pesada__guia[data-estado] { font-weight: 700; }
+.pesada__guia[data-estado="falta"] { color: var(--tirar); }
+.pesada__guia[data-estado="sobra"] { color: var(--tinta); }
+.pesada__guia[data-estado="justo"] { color: var(--bien); }
 .pesada__g { display: inline-flex; align-items: center; gap: 4px; color: var(--tinta-2); }
 .pesada .quitar { width: 30px; }
-.entrada.entrada--g { width: 96px; min-height: 52px; text-align: right; font: 500 24px/1 var(--f-mono); padding: 8px 10px; }
+.entrada.entrada--g { width: 96px; min-height: 52px; text-align: right; font: 500 24px/1 var(--f-mono); padding: 8px 10px; color: var(--tinta); }
+.entrada.entrada--g::placeholder { color: var(--tinta-2); opacity: .5; }
 .entrada.entrada--corta { width: 88px; min-height: 42px; font-size: 18px; }
 
 /* Macros del plato: rojo lo que falta, color normal lo que sobra */
