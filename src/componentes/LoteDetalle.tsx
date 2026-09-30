@@ -1,10 +1,13 @@
-/* Hoja de un táper: lo que queda, pesarlo, sacar gramos para Rali o la basura, historial y qué lleva. */
+/* Hoja de un táper: lo que queda, pesarlo, sacar gramos para Rali o la basura, historial y qué lleva
+   (lo que lleva se puede cambiar si al cocinar no seguiste la receta al pie de la letra). */
 import { useState } from "react";
+import type { Item } from "../alimentos/tipos";
 import { cuentaAtras, diasEntre, fechaCorta, fechaDe, MOMENTO, pesoTexto } from "../nucleo/fechas";
-import { borrarLote, deshacer, frescura, macrosDe, moverCaducidad, pesarQueda, por100, quedan, sacar } from "../nucleo/lotes";
+import { borrarLote, cambiarIngredientes, deshacer, frescura, macrosDe, moverCaducidad, pesarQueda, por100, quedan, sacar } from "../nucleo/lotes";
 import { TIPO } from "../nucleo/receta";
 import type { Datos, Destino, Lote, Tipo } from "../nucleo/tipos";
-import { Confirmar, Hoja, Paso } from "./base";
+import { Boton, Confirmar, Hoja, Paso } from "./base";
+import { Buscador, ListaItems } from "./Buscador";
 
 const DESTINO: Record<Destino, string> = { comida: "comida", rali: "para Rali", basura: "a la basura" };
 
@@ -17,6 +20,8 @@ export function LoteDetalle({ lote, datos, cambiar, cerrar, ahora }: {
   const [borrando, setBorrando] = useState(false);
   const [peso, setPeso] = useState("");
   const [saca, setSaca] = useState("");
+  const [ajustando, setAjustando] = useState<Item[] | null>(null);
+  const [buscando, setBuscando] = useState(false);
   // Siempre la versión actual del táper (por si cambia mientras la hoja está abierta).
   const l = lote ? datos.lotes.find((x) => x.id === lote.id) ?? null : null;
   if (!l) return <Hoja abierta={false} cerrar={cerrar} titulo=""><span /></Hoja>;
@@ -29,7 +34,7 @@ export function LoteDetalle({ lote, datos, cambiar, cerrar, ahora }: {
   const salir = (destino: Destino, gramos: number) => { cambiar((d) => sacar(d, l.id, destino, gramos, ahora).datos); setSaca(""); };
 
   return (
-    <Hoja abierta cerrar={() => { setPeso(""); setSaca(""); cerrar(); }} titulo={l.nombre}>
+    <Hoja abierta cerrar={() => { setPeso(""); setSaca(""); setAjustando(null); setBuscando(false); cerrar(); }} titulo={l.nombre}>
       <p className="nota"><TipoMarca tipo={l.tipo} /> {TIPO[l.tipo].nombre}. Hecho el {fechaCorta(l.hecho)}.</p>
       <div className="ajuste">
         <span className="nota" data-estado={f.estado}>{cuentaAtras(l.caduca, hoy)}</span>
@@ -72,12 +77,28 @@ export function LoteDetalle({ lote, datos, cambiar, cerrar, ahora }: {
       ) : null}
 
       {l.ingredientes.length ? (
-        <details className="pliegue">
+        <details className="pliegue" open={ajustando ? true : undefined}>
           <summary><span>Ingredientes</span><span className="nota">en crudo</span></summary>
-          <ul className="lista-simple">
-            {l.ingredientes.map((i) => <li key={i.alimentoId}><span>{i.nombre}</span><span className="mono">{Math.round(i.gramos)} g</span></li>)}
-          </ul>
-          {l.guardar ? <p className="nota" style={{ marginTop: 10 }}>{l.guardar}</p> : null}
+          {ajustando ? (
+            <>
+              <p className="nota">Lo que echaste de verdad en este táper. La receta no cambia.</p>
+              <ListaItems items={ajustando} cambiar={setAjustando} etiquetaTotal="Todo el táper" />
+              {buscando ? (
+                <Buscador guardados={datos.alimentos} alGuardarAlimento={(a) => cambiar((d) => ({ ...d, alimentos: { ...d.alimentos, [a.id]: a } }))}
+                  alAnadir={(i) => { setAjustando((x) => [...(x ?? []), i]); setBuscando(false); }} />
+              ) : <button type="button" className="boton-texto" onClick={() => setBuscando(true)}>+ Ingrediente</button>}
+              <Boton ancho disabled={!ajustando.some((i) => i.gramos > 0)} onClick={() => { cambiar((d) => cambiarIngredientes(d, l.id, ajustando)); setAjustando(null); setBuscando(false); }}>Guardar cambios</Boton>
+              <button type="button" className="boton-texto boton-texto--suave" onClick={() => { setAjustando(null); setBuscando(false); }}>Cancelar</button>
+            </>
+          ) : (
+            <>
+              <ul className="lista-simple">
+                {l.ingredientes.map((i) => <li key={i.alimentoId}><span>{i.nombre}</span><span className="mono">{Math.round(i.gramos)} g</span></li>)}
+              </ul>
+              <button type="button" className="boton-texto boton-texto--suave" onClick={() => setAjustando(l.ingredientes.map((i) => ({ ...i, gramos: Math.round(i.gramos) })))}>Cambiar cantidades</button>
+              {l.guardar ? <p className="nota" style={{ marginTop: 10 }}>{l.guardar}</p> : null}
+            </>
+          )}
         </details>
       ) : null}
 

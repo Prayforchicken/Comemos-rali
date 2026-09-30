@@ -21,10 +21,11 @@ import { anadirExtra, apuntesDelDia, quitarExtra, totalDelDia } from "../nucleo/
 import { cuentaAtras, diasEntre, fechaCorta, fechaDe, fechaLarga, horaDe, MOMENTO, pesoTexto, sumarDias } from "../nucleo/fechas";
 import { anadirAMano, borrarLote, cocinar, deshacer, enNevera, frescura, momentoAhora, por100, quedan, sacar, tamanoDe, tomasDeNuevoBatch, type Toma } from "../nucleo/lotes";
 import { calcular, macrosFijos, recomendar, sugerencia } from "../nucleo/plato";
-import { candidatas, lista, loQueTengo, marcar, propuestaActual, proponer, textoCompra } from "../nucleo/propuesta";
+import { apartar, cambiarCantidad, candidatas, factorDe, lista, loQueTengo, marcar, propuestaActual, proponer, textoCompra, todasLasRecetas, type Linea } from "../nucleo/propuesta";
 import { duraDe, formaDe, racionDe, TIPO } from "../nucleo/receta";
 import { planSemana } from "../nucleo/semana";
-import type { Lote, Momento, Tipo } from "../nucleo/tipos";
+import type { Lote, Momento, Receta, Tipo } from "../nucleo/tipos";
+import { EditorReceta, recetaNueva } from "./Recetas";
 
 /* ---------------- ayudas de texto ---------------- */
 
@@ -52,6 +53,8 @@ export function Hoy(props: PantallaProps) {
   const { datos, cambiar, ahora, hoy } = props;
   const [detalle, setDetalle] = useState<Lote | null>(null);
   const [permiso, setPermiso] = useState(true);
+  const [aMano, setAMano] = useState(false);
+  const avisar = useAvisar();
   const nevera = enNevera(datos);
   const total = totalDelDia(datos, hoy);
   const objetivo = datos.ajustes.objetivo.kcal;
@@ -85,10 +88,18 @@ export function Hoy(props: PantallaProps) {
           <div className="lista-plana">
             {nevera.map((l) => <FilaTaper key={l.id} l={l} hoy={hoy} abrir={() => setDetalle(l)} />)}
           </div>
+          <button type="button" className="boton-texto boton-texto--suave" onClick={() => setAMano(true)}>+ Sobras</button>
         </section>
       ) : null}
 
-      <Batch key={nevera.length ? "siguiente" : "toca"} {...props} abiertoAlEmpezar={!nevera.length} cuando={proxima && nevera.length ? diaNombre(proxima.fecha, hoy) : null} />
+      <Batch key={nevera.length ? "siguiente" : "toca"} {...props} abiertoAlEmpezar={!nevera.length} cuando={proxima && nevera.length ? diaNombre(proxima.fecha, hoy) : null} cocinaEl={proxima && nevera.length ? proxima.fecha : hoy} alSobras={() => setAMano(true)} />
+
+      <Sobras abierta={aMano} cerrar={() => setAMano(false)} hoy={hoy} datos={datos} cambiar={cambiar} alGuardar={(x) => {
+        cambiar((d) => anadirAMano(d, x, ahora));
+        setAMano(false);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        avisar({ texto: `${x.nombre} a la nevera` });
+      }} />
 
       <Comido {...props} />
 
@@ -253,48 +264,107 @@ function FilaTaper({ l, hoy, abrir }: { l: Lote; hoy: string; abrir: () => void 
 
 /* ---------------- qué cocinar ---------------- */
 
-function Batch({ datos, cambiar, ahora, hoy, irA, abiertoAlEmpezar, cuando }: PantallaProps & { abiertoAlEmpezar: boolean; cuando: string | null }) {
+/**
+ * Hoja para elegir qué cocinar: la propuesta primero, luego el resto por turno,
+ * y al final "+ Nueva receta" (se guarda en Recetas y queda elegida).
+ */
+export function ElegirReceta({ abierta, cerrar, datos, cambiar, alElegir }: {
+  abierta: boolean; cerrar: () => void; datos: PantallaProps["datos"]; cambiar: PantallaProps["cambiar"]; alElegir?: () => void;
+}) {
+  const [nueva, setNueva] = useState<Receta | null>(null);
+  const actual = propuestaActual(datos);
+  const turno = candidatas(datos);
+  const resto = [...turno, ...todasLasRecetas(datos).filter((x) => !turno.includes(x))].filter((x) => x.id !== actual?.id);
+  const elegir = (id: string) => { cambiar((d) => apartar(proponer(d, id), id, false)); alElegir?.(); cerrar(); };
+  const fila = (x: Receta, propuesta: boolean) => {
+    const t = racionDe(x, tamanoDe(datos, x));
+    return (
+      <button key={x.id} type="button" className="fila-plana fila-plana--boton" data-propuesta={propuesta} onClick={() => elegir(x.id)}>
+        <span className="fila-plana__txt">
+          {propuesta ? <span className="nota nota--acento">Propuesta</span> : null}
+          <b>{x.nombre}</b>
+          <span className="nota">{formaDe(x)}, {t.kcal} kcal, {x.minutos} min{datos.apartadas.includes(x.id) ? ", apartada" : ""}</span>
+        </span>
+        <span className="flecha" aria-hidden="true">›</span>
+      </button>
+    );
+  };
+  return (
+    <>
+      <Hoja abierta={abierta && !nueva} cerrar={cerrar} titulo="Qué cocinas">
+        <div className="lista-plana">
+          {actual ? fila(actual, true) : null}
+          {resto.map((x) => fila(x, false))}
+        </div>
+        <button type="button" className="boton-texto" onClick={() => setNueva(recetaNueva())}>+ Nueva receta</button>
+      </Hoja>
+      <Hoja abierta={Boolean(nueva)} cerrar={() => setNueva(null)} titulo="Nueva receta">
+        {nueva ? <EditorReceta key={nueva.id} inicial={nueva} datos={datos}
+          alGuardarAlimento={(a) => cambiar((d) => ({ ...d, alimentos: { ...d.alimentos, [a.id]: a } }))}
+          alGuardar={(r) => { cambiar((d) => proponer({ ...d, recetasPropias: { ...d.recetasPropias, [r.id]: r } }, r.id)); setNueva(null); alElegir?.(); cerrar(); }} /> : null}
+      </Hoja>
+    </>
+  );
+}
+
+function Batch({ datos, cambiar, ahora, hoy, abiertoAlEmpezar, cuando, cocinaEl, alSobras }: PantallaProps & { abiertoAlEmpezar: boolean; cuando: string | null; cocinaEl: string; alSobras: () => void }) {
   const avisar = useAvisar();
   const receta = propuestaActual(datos);
   const [raciones, setRaciones] = useState(datos.ajustes.raciones);
   const [abierto, setAbierto] = useState(abiertoAlEmpezar);
   const [eligiendo, setEligiendo] = useState(false);
-  const [aMano, setAMano] = useState(false);
+  const [editando, setEditando] = useState(false);
+  const [escrito, setEscrito] = useState<Record<string, string>>({});
+
+  const elegir = (
+    <ElegirReceta abierta={eligiendo} cerrar={() => setEligiendo(false)} datos={datos} cambiar={cambiar}
+      alElegir={() => { setAbierto(true); setEditando(false); setEscrito({}); }} />
+  );
 
   if (!receta) {
     return (
       <section className="bloque">
         <p>Has apartado todas las recetas.</p>
-        <button type="button" className="boton-texto" onClick={() => irA("recetas")}>Ir a recetas</button>
+        <button type="button" className="boton-texto" onClick={() => setEligiendo(true)}>Elegir receta</button>
+        {elegir}
       </section>
     );
   }
 
-  const r = racionDe(receta, tamanoDe(datos, receta));
+  const factor = factorDe(datos, receta.id);
+  const tamano = tamanoDe(datos, receta);
+  const r = racionDe(receta, tamano, factor);
 
   if (!abierto) {
     return (
-      <button type="button" className="fila-plana fila-plana--boton" onClick={() => setAbierto(true)}>
-        <span className="fila-plana__txt"><span className="nota">{cuando ? `Cocinas ${cuando}` : "Siguiente"}</span><b>{receta.nombre}</b></span>
-        <span className="flecha" aria-hidden="true">›</span>
-      </button>
+      <>
+        <button type="button" className="fila-plana fila-plana--boton" onClick={() => setEligiendo(true)}>
+          <span className="fila-plana__txt"><span className="nota">{cuando ? `Cocinas ${cuando}` : "Siguiente"}</span><b>{receta.nombre}</b></span>
+          <span className="flecha" aria-hidden="true">›</span>
+        </button>
+        {elegir}
+      </>
     );
   }
 
   const tomas = tomasDeNuevoBatch(datos, r.kcal * raciones, ahora);
-  const caduca = sumarDias(hoy, duraDe(receta));
+  const caduca = sumarDias(cocinaEl, duraDe(receta)); // desde el día en que toca cocinarla
   const pasadas = tomas.filter((t) => t.fecha > caduca);
-  const lineas = lista(receta, raciones, tamanoDe(datos, receta));
+  const lineas = lista(receta, raciones, tamano, factor);
+  const cambiados = lineas.filter((l) => l.cambiado).length;
   const tengo = loQueTengo(datos, hoy);
-  const falta = lineas.filter((l) => !tengo.has(l.alimentoId));
+  const falta = lineas.filter((l) => l.gramos > 0 && !tengo.has(l.alimentoId));
 
   const loHago = () => {
     const antes = new Set(datos.lotes.map((l) => l.id));
+    const variacion = datos.variacion;
     const nuevo = cocinar(datos, receta, raciones, ahora);
     const ids = nuevo.lotes.filter((l) => !antes.has(l.id)).map((l) => l.id);
     cambiar(() => nuevo);
+    setEditando(false);
+    setAbierto(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
-    avisar({ texto: `${receta.corto} a la nevera. Pésalo cuando lo tengas`, deshacer: () => cambiar((d) => ({ ...ids.reduce(borrarLote, d), propuesta: receta.id })) });
+    avisar({ texto: `${receta.corto} a la nevera. Pésalo cuando lo tengas`, deshacer: () => cambiar((d) => ({ ...ids.reduce(borrarLote, d), propuesta: receta.id, variacion })) });
   };
 
   const copiar = async () => {
@@ -302,10 +372,19 @@ function Batch({ datos, cambiar, ahora, hoy, irA, abiertoAlEmpezar, cuando }: Pa
     avisar({ texto: res === "copiado" ? "Lista copiada" : res === "compartido" ? "Lista compartida" : "No se ha podido copiar" });
   };
 
+  /** Gramos de hoy de un ingrediente: se guardan como proporción de lo que dice la receta. */
+  const escribir = (l: Linea, texto: string) => {
+    const limpio = texto.replace(/[^\d]/g, "");
+    setEscrito((e) => ({ ...e, [l.alimentoId]: limpio }));
+    if (limpio !== "" && l.crudo > 0) cambiar((d) => cambiarCantidad(d, receta.id, l.alimentoId, Number(limpio) / l.crudo));
+  };
+
   return (
     <section className="bloque" aria-label="Qué cocinar">
       <p className="nota">{abiertoAlEmpezar ? "Cocina hoy" : cuando ? `Cocinas ${cuando}` : "Siguiente"}</p>
-      <h2 className="bloque__titulo">{receta.nombre}</h2>
+      <h2 className="bloque__titulo">
+        <button type="button" className="batch__titulo" onClick={() => setEligiendo(true)}>{receta.nombre} <span className="batch__cambiar">Cambiar</span></button>
+      </h2>
       <p className="nota">{formaDe(receta)}, {receta.minutos} min. Cada ración, {r.kcal} kcal y {Math.round(r.proteina)} g de proteína.</p>
 
       <div className="batch__raciones">
@@ -319,21 +398,50 @@ function Batch({ datos, cambiar, ahora, hoy, irA, abiertoAlEmpezar, cuando }: Pa
       </p>
 
       <details className="pliegue">
-        <summary><span>Ingredientes</span><span className="nota">{falta.length ? `faltan ${falta.length}` : "todo en casa"}</span></summary>
-        <div className="lista-nevera">
-          {lineas.map((l) => {
-            const si = tengo.has(l.alimentoId);
-            return (
-              <label key={l.alimentoId} className="ingrediente" data-tengo={si}>
-                <input type="checkbox" id={`tengo-${l.alimentoId}`} checked={si} onChange={(e) => cambiar((d) => marcar(d, l.alimentoId, e.target.checked, hoy))} />
-                <span className="ingrediente__caja"><IcoCheck /></span>
-                <span className="ingrediente__g">{l.gramos} g</span>
-                <span className="ingrediente__nombre"><span>{l.nombre}</span>{l.aprox ? <small>{l.aprox}</small> : null}</span>
-              </label>
-            );
-          })}
-        </div>
-        {falta.length ? <button type="button" className="boton-texto" onClick={() => void copiar()}><IcoCopiar />Copiar lo que falta</button> : null}
+        <summary>
+          <span>Ingredientes</span>
+          <span className="nota">{[falta.length ? `faltan ${falta.length}` : "todo en casa", cambiados ? `${cambiados} ${cambiados === 1 ? "cambio" : "cambios"}` : ""].filter(Boolean).join(", ")}</span>
+        </summary>
+        {editando ? (
+          <>
+            <p className="nota">Solo para este batch. La receta no cambia.</p>
+            <div className="lista-nevera">
+              {lineas.map((l) => (
+                <label key={l.alimentoId} className="cantidad" data-cambiado={l.cambiado}>
+                  <span className="cantidad__nombre"><span>{l.nombre}</span>{l.cambiado ? <small>receta {l.receta} g</small> : null}</span>
+                  <input className="entrada entrada--g entrada--corta" id={`cantidad-${l.alimentoId}`} inputMode="numeric"
+                    value={escrito[l.alimentoId] ?? String(l.gramos)} onChange={(e) => escribir(l, e.target.value)}
+                    onBlur={() => setEscrito((e) => { const x = { ...e }; delete x[l.alimentoId]; return x; })} />
+                  <span className="nota">g</span>
+                </label>
+              ))}
+            </div>
+            <div className="fila fila--entre">
+              <button type="button" className="boton-texto" onClick={() => { setEditando(false); setEscrito({}); }}>Listo</button>
+              {cambiados ? <button type="button" className="boton-texto boton-texto--suave" onClick={() => { cambiar((d) => ({ ...d, variacion: null })); setEscrito({}); }}>Como la receta</button> : null}
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="lista-nevera">
+              {lineas.map((l) => {
+                const si = tengo.has(l.alimentoId);
+                return (
+                  <label key={l.alimentoId} className="ingrediente" data-tengo={si} data-cambiado={l.cambiado} data-cero={l.gramos === 0}>
+                    <input type="checkbox" id={`tengo-${l.alimentoId}`} checked={si} onChange={(e) => cambiar((d) => marcar(d, l.alimentoId, e.target.checked, hoy))} />
+                    <span className="ingrediente__caja"><IcoCheck /></span>
+                    <span className="ingrediente__g">{l.gramos} g</span>
+                    <span className="ingrediente__nombre"><span>{l.nombre}</span>{l.aprox ? <small>{l.aprox}</small> : null}</span>
+                  </label>
+                );
+              })}
+            </div>
+            <div className="fila fila--entre">
+              {falta.length ? <button type="button" className="boton-texto" onClick={() => void copiar()}><IcoCopiar />Copiar lo que falta</button> : <span />}
+              <button type="button" className="boton-texto boton-texto--suave" onClick={() => setEditando(true)}>Cambiar cantidades</button>
+            </div>
+          </>
+        )}
       </details>
 
       <details className="pliegue">
@@ -343,29 +451,9 @@ function Batch({ datos, cambiar, ahora, hoy, irA, abiertoAlEmpezar, cuando }: Pa
       </details>
 
       <Boton grande ancho onClick={loHago}>Lo hago</Boton>
-      <div className="fila fila--entre">
-        <button type="button" className="boton-texto" onClick={() => setEligiendo(true)}>Otra receta</button>
-        <button type="button" className="boton-texto boton-texto--suave" onClick={() => setAMano(true)}>Añadir sobras</button>
-      </div>
+      {abiertoAlEmpezar ? <button type="button" className="boton-texto boton-texto--suave" onClick={alSobras}>Tengo sobras</button> : null}
 
-      <Hoja abierta={eligiendo} cerrar={() => setEligiendo(false)} titulo="Otra receta">
-        <div className="lista-plana">
-          {candidatas(datos).filter((x) => x.id !== receta.id).map((x) => {
-            const t = racionDe(x, tamanoDe(datos, x));
-            return (
-              <button key={x.id} type="button" className="fila-plana fila-plana--boton" onClick={() => { cambiar((d) => proponer(d, x.id)); setEligiendo(false); }}>
-                <span className="fila-plana__txt"><b>{x.nombre}</b><span className="nota">{formaDe(x)}, {t.kcal} kcal, {x.minutos} min</span></span>
-              </button>
-            );
-          })}
-        </div>
-      </Hoja>
-      <Sobras abierta={aMano} cerrar={() => setAMano(false)} hoy={hoy} datos={datos} cambiar={cambiar} alGuardar={(x) => {
-        cambiar((d) => anadirAMano(d, x, ahora));
-        setAMano(false);
-        window.scrollTo({ top: 0, behavior: "smooth" });
-        avisar({ texto: `${x.nombre} a la nevera` });
-      }} />
+      {elegir}
     </section>
   );
 }

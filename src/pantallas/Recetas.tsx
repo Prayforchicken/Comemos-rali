@@ -14,6 +14,9 @@ import { duraDe, formaDe, racionDe, TIPO } from "../nucleo/receta";
 import { apartar, lista, proponer, todasLasRecetas, ultimaVez } from "../nucleo/propuesta";
 import type { Receta } from "../nucleo/tipos";
 
+/** Receta propia en blanco, para el editor. */
+export const recetaNueva = (): Receta => ({ id: nuevoId("receta"), nombre: "", corto: "", componentes: [], pasos: [], minutos: 40, guardar: "", dura: 4, propia: true, salen: 4 });
+
 export function Recetas({ datos, cambiar, hoy, irA }: PantallaProps) {
   const avisar = useAvisar();
   const [viendo, setViendo] = useState<Receta | null>(null);
@@ -37,8 +40,6 @@ export function Recetas({ datos, cambiar, hoy, irA }: PantallaProps) {
     );
   };
 
-  const nueva = (): Receta => ({ id: nuevoId("receta"), nombre: "", corto: "", componentes: [], pasos: [], minutos: 40, guardar: "", dura: 4, propia: true, salen: 4 });
-
   return (
     <div className="pantalla">
       <h1>Recetas</h1>
@@ -46,7 +47,7 @@ export function Recetas({ datos, cambiar, hoy, irA }: PantallaProps) {
       <div className="lista-plana">
         {activas.map((r) => <Fila key={r.id} r={r} />)}
       </div>
-      <button type="button" className="boton-texto" onClick={() => setEditando(nueva())}>+ Nueva receta</button>
+      <button type="button" className="boton-texto" onClick={() => setEditando(recetaNueva())}>+ Nueva receta</button>
 
       {apartadas.length ? (
         <details className="pliegue">
@@ -135,7 +136,7 @@ function Parte({ titulo, items, setItems, salen, datos, alGuardarAlimento }: {
   );
 }
 
-function EditorReceta({ inicial, datos, alGuardar, alGuardarAlimento }: {
+export function EditorReceta({ inicial, datos, alGuardar, alGuardarAlimento }: {
   inicial: Receta; datos: PantallaProps["datos"]; alGuardar: (r: Receta) => void; alGuardarAlimento: Parameters<typeof Buscador>[0]["alGuardarAlimento"];
 }) {
   const salen0 = inicial.salen ?? 4;

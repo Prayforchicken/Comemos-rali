@@ -5,9 +5,14 @@ Web instalable (PWA, en Vercel) y APK de Android con avisos.
 
 ## Cómo se usa
 
-1. **Nevera vacía.** La app propone un batch para 2 días (4 raciones; cada ración se ajusta a lo que
+1. **Qué cocinar.** Las recetas son **plantillas**: por defecto la app da por hecho que cocinas tal cual dice la receta.
+   Tocando "Cocinas sábado" (o "Cambiar" junto al nombre) eliges la propuesta, cualquier otra o una nueva.
+   Con la nevera vacía, la app propone un batch para 2 días (4 raciones; cada ración se ajusta a lo que
    toca en una comida o cena). Dice para qué tomas da. Los ingredientes, plegados, salen con gramos
    y unidades de cocina ("≈ 3 botes de 400 g"); marcas lo que tienes y copias lo que falta.
+   "Cambiar cantidades" ajusta los gramos de ESTE batch (800 g de garbanzos en vez de 720, sin zanahoria):
+   la receta no cambia, el táper lleva lo de hoy y las kcal salen de ahí. Si se te olvidó, también se cambia
+   después desde el detalle del táper (Ingredientes, "Cambiar cantidades").
 2. **"Lo hago".** Cada parte de la receta va a su táper, con su tipo:
    **P** (plato de proteína, el curry), **H** (guarnición de hidratos, el arroz) o **P.C.** (plato combinado,
    la boloñesa con la pasta). La app estima cuánto pesa lo cocinado; lo corriges pesando el táper.
@@ -24,6 +29,7 @@ Web instalable (PWA, en Vercel) y APK de Android con avisos.
 5. **Semana.** Qué comes en cada toma de los próximos 7 días y qué día vuelves a cocinar.
 
 Además:
+- **Sobras**: "+ Sobras" debajo de la nevera, con su peso, macros por 100 g y fecha de caducidad.
 - **En la nevera**: cada táper con su tipo, lo que queda, sus macros por 100 g y una cuenta atrás hasta que caduca
   ("Caduca en 2 días"). Va ordenada por caducidad: lo primero es lo que antes hay que comer o tirar.
   Mañana o hoy sale en ámbar ("cómetelo ya"); caducado, en rojo ("a la basura"). La fecha se cambia en el detalle.
@@ -47,7 +53,7 @@ src/
     lotes.ts       La nevera: cocinar, sacar gramos, pesar, caducidad y a qué tomas da lo que hay.
     plato.ts       Tu plato: cuánto servirte de cada táper (recomendar) y macros de lo pesado frente a lo que toca.
     semana.ts      Plan de 7 días y cuándo volver a cocinar.
-    propuesta.ts   Qué cocinar: turno de recetas y lista de ingredientes con unidades.
+    propuesta.ts   Qué cocinar: turno de recetas, lista de ingredientes con unidades y cambios de cantidades del batch.
     dia.ts         Lo comido en un día (gramos de los tápers + extras).
     cuentas.ts     Gramos comidos / Rali / basura y kcal de los últimos días.
     fechas.ts      Fechas y horas (hora de España).

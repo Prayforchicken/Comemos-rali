@@ -5,10 +5,10 @@ import { alimentoBase } from "../src/alimentos/base";
 import { datosIniciales, normalizar } from "../src/datos/almacen";
 import { resumen } from "../src/nucleo/cuentas";
 import { anadirExtra, gramosPorReceta, totalDelDia } from "../src/nucleo/dia";
-import { anadirAMano, cocinar, enNevera, frescura, macrosDe, moverCaducidad, pesarQueda, por100, primeraTomaLibre, proyectar, quedan, sacar, tamanoDe } from "../src/nucleo/lotes";
+import { anadirAMano, cambiarIngredientes, cocinar, enNevera, frescura, macrosDe, moverCaducidad, pesarQueda, por100, primeraTomaLibre, proyectar, quedan, sacar, tamanoDe } from "../src/nucleo/lotes";
 import { cuentaAtras } from "../src/nucleo/fechas";
 import { calcular, macrosFijos, objetivoToma, recomendar, sugerencia } from "../src/nucleo/plato";
-import { candidatas, enUnidades, lista, otraIdea, propuestaActual } from "../src/nucleo/propuesta";
+import { cambiarCantidad, candidatas, enUnidades, factorDe, lista, otraIdea, proponer, propuestaActual } from "../src/nucleo/propuesta";
 import { planSemana } from "../src/nucleo/semana";
 import { RECETAS } from "../src/recetas/recetas";
 
@@ -90,6 +90,43 @@ test("cuánto servirse: llega a las kcal, más guiso que arroz y nunca más de l
   assert.ok(recomendar(casi, [casi.lotes[1]], "comida")[h.id] <= 50);
   // Si otra cosa ya cubre la comida, no hace falta nada.
   assert.equal(recomendar(d, [p], "comida", { kcal: 900, proteina: 50, carbos: 100, grasa: 30 })[p.id], 0);
+});
+
+test("la receta es una plantilla: los cambios de hoy van al táper, no a la receta", () => {
+  const tamano = tamanoDe(datosIniciales(), curry);
+  const garbanzos = lista(curry, 4, tamano).find((l) => l.alimentoId === "base-garbanzos-cocidos")!;
+  // Hoy echas 800 g de garbanzos (dos botes) y nada de skyr.
+  let d = proponer(datosIniciales(), curry.id);
+  d = cambiarCantidad(d, curry.id, "base-garbanzos-cocidos", 800 / garbanzos.crudo);
+  d = cambiarCantidad(d, curry.id, "base-skyr", 0);
+  const hoy = lista(curry, 4, tamano, factorDe(d, curry.id));
+  assert.equal(hoy.find((l) => l.alimentoId === "base-garbanzos-cocidos")!.gramos, 800);
+  assert.equal(hoy.find((l) => l.alimentoId === "base-garbanzos-cocidos")!.receta, garbanzos.receta);
+  assert.equal(hoy.find((l) => l.alimentoId === "base-skyr")!.gramos, 0);
+  const hecho = cocinar(d, curry, 4, hora("2026-09-29T19:30:00"));
+  const tal = cocinar(proponer(datosIniciales(), curry.id), curry, 4, hora("2026-09-29T19:30:00"));
+  const g = (x: typeof hecho, id: string) => x.lotes[0].ingredientes.find((i) => i.alimentoId === id)?.gramos ?? 0;
+  assert.equal(Math.round(g(hecho, "base-garbanzos-cocidos")), 800);
+  assert.equal(g(hecho, "base-skyr"), 0);
+  assert.ok(g(tal, "base-skyr") > 0);
+  assert.notEqual(Math.round(hecho.lotes[0].total.kcal), Math.round(tal.lotes[0].total.kcal));
+  assert.equal(hecho.variacion, null); // al cocinar se olvidan los cambios: el próximo batch, como la receta
+  // Elegir otra receta descarta los cambios de esta.
+  assert.equal(proponer(d, bolonesa.id).variacion, null);
+  // Volver a "como la receta": factor 1 borra el cambio.
+  assert.deepEqual(Object.keys(factorDe(cambiarCantidad(d, curry.id, "base-skyr", 1), curry.id)), ["base-garbanzos-cocidos"]);
+});
+
+test("cambiar lo que lleva un táper ya hecho recalcula sus macros", () => {
+  const d = cocinar(datosIniciales(), curry, 4, hora("2026-09-29T19:30:00"));
+  const p = d.lotes[0];
+  const mas = p.ingredientes.map((i) => (i.alimentoId === "base-aceite-oliva" ? { ...i, gramos: i.gramos + 30 } : i));
+  const d2 = cambiarIngredientes(d, p.id, mas);
+  assert.equal(Math.round(d2.lotes[0].total.kcal - p.total.kcal), Math.round(30 * alimentoBase("aceite-oliva").n.kcal / 100));
+  assert.ok(por100(d2.lotes[0]).grasa > por100(p).grasa);
+  // Si ya estaba pesado, el peso no se toca.
+  const pesado = pesarQueda(d, p.id, 2000);
+  assert.equal(cambiarIngredientes(pesado, p.id, mas).lotes[0].gramos, 2000);
 });
 
 test("un batch hecho por la tarde empieza en la cena de hoy", () => {

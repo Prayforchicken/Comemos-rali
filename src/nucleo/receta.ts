@@ -12,8 +12,13 @@ export const TIPO: Record<Tipo, { corto: string; nombre: string }> = {
 /** Todos los ingredientes de una ración (todas las partes juntas), en crudo. */
 export const ingredientesDe = (r: Receta): Item[] => r.componentes.flatMap((c) => c.ingredientes);
 
-/** Kcal y macros de una ración al tamaño elegido. */
-export const racionDe = (r: Receta, tamano: number): Totales => por(totales(ingredientesDe(r)), tamano / 100);
+/** Aplica los cambios de cantidades de un batch (por id de alimento: gramos de hoy / de la receta). */
+export const conCambios = (items: Item[], factor: Record<string, number> = {}): Item[] =>
+  items.map((i) => (factor[i.alimentoId] !== undefined ? { ...i, gramos: i.gramos * factor[i.alimentoId] } : i)).filter((i) => i.gramos > 0);
+
+/** Kcal y macros de una ración al tamaño elegido (con los cambios de hoy, si los hay). */
+export const racionDe = (r: Receta, tamano: number, factor: Record<string, number> = {}): Totales =>
+  por(totales(conCambios(ingredientesDe(r), factor)), tamano / 100);
 
 /** "P + H" o "P.C.": cómo se guarda la receta. */
 export const formaDe = (r: Receta) => r.componentes.map((c) => TIPO[c.tipo].corto).join(" + ");

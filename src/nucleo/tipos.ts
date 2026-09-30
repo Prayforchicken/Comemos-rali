@@ -118,6 +118,12 @@ export interface Datos {
   apartadas: string[];
   /** Receta que se está proponiendo ahora (null = la que toque por turno). */
   propuesta: string | null;
+  /**
+   * Las recetas son plantillas: por defecto el batch se hace tal cual. Si hoy cambias alguna cantidad
+   * (800 g de garbanzos en vez de 720), se guarda aquí para ESTE batch: por id de alimento,
+   * gramos de hoy / gramos de la receta. La receta no cambia. Se borra al cocinar.
+   */
+  variacion: { recetaId: string; factor: Record<string, number> } | null;
   /** Lo marcado hoy en la lista de "mira en la nevera", por id de alimento. Solo vale el día que se marcó. */
   nevera: { fecha: string; tengo: string[] };
   extras: Record<string, Extra[]>;

@@ -3,9 +3,9 @@
    Funciones puras: reciben Datos y devuelven Datos nuevos (o un cálculo).
    ============================================================ */
 import { por, totales } from "../alimentos/nutricion";
-import type { Por100, Totales } from "../alimentos/tipos";
+import type { Item, Por100, Totales } from "../alimentos/tipos";
 import { diasEntre, fechaDe, horaDe, minutos, momentoDe, sumarDias } from "./fechas";
-import { escalar, pesoEstimado, racionDe } from "./receta";
+import { conCambios, escalar, pesoEstimado, racionDe } from "./receta";
 import type { Datos, Destino, Lote, Momento, Receta, Salida, Tipo } from "./tipos";
 
 export interface Toma { fecha: string; momento: Momento }
@@ -136,19 +136,39 @@ export function tomasDeNuevoBatch(d: Datos, kcal: number, ahora: Date): Toma[] {
 
 /* ---------------- cambios ---------------- */
 
-/** "Lo hago": cada parte de la receta pasa a la nevera en su táper, con un peso estimado. */
+/**
+ * "Lo hago": cada parte de la receta pasa a la nevera en su táper, con un peso estimado.
+ * La receta es la plantilla; si hoy cambiaste cantidades (`d.variacion`), el táper lleva las de hoy.
+ */
 export function cocinar(d: Datos, r: Receta, raciones: number, ahora: Date): Datos {
   const f = raciones * (tamanoDe(d, r) / 100);
+  const factor = d.variacion?.recetaId === r.id ? d.variacion.factor : {};
   const batchId = nuevoId("batch");
-  const nuevos: Lote[] = r.componentes.map((c) => {
-    const ingredientes = escalar(c.ingredientes, f);
+  const nuevos: Lote[] = r.componentes.filter((c) => conCambios(c.ingredientes, factor).length).map((c) => {
+    const ingredientes = escalar(conCambios(c.ingredientes, factor), f);
     return {
       id: nuevoId("lote"), batchId, recetaId: r.id, nombre: r.componentes.length === 1 ? r.nombre : c.nombre, tipo: c.tipo,
       total: totales(ingredientes), gramos: Math.max(1, pesoEstimado(ingredientes)), pesado: false, raciones,
       hecho: fechaDe(ahora), caduca: sumarDias(fechaDe(ahora), c.dura ?? r.dura), creado: ahora.toISOString(), ingredientes, guardar: r.guardar, salidas: [],
     };
   });
-  return { ...d, lotes: [...d.lotes, ...nuevos], propuesta: null };
+  return { ...d, lotes: [...d.lotes, ...nuevos], propuesta: null, variacion: null };
+}
+
+/**
+ * Lo que de verdad lleva un táper ya hecho (si al cocinar cambiaste algo y no lo apuntaste antes).
+ * Cambian sus kcal y macros, también las de lo que ya comiste de él. Si no está pesado, su peso estimado.
+ */
+export function cambiarIngredientes(d: Datos, loteId: string, items: Item[]): Datos {
+  return {
+    ...d,
+    lotes: d.lotes.map((l) => {
+      if (l.id !== loteId) return l;
+      const ingredientes = items.filter((i) => i.gramos > 0);
+      const gramos = l.pesado ? l.gramos : Math.max(salido(l) + 1, pesoEstimado(ingredientes));
+      return { ...l, ingredientes, total: totales(ingredientes), gramos };
+    }),
+  };
 }
 
 /** Sobras o algo hecho fuera de la app: nombre, tipo, peso y macros por 100 g. */

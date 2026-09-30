@@ -24,7 +24,7 @@ export const AJUSTES_INICIALES: Ajustes = {
 
 export function datosIniciales(): Datos {
   return {
-    version: 2, lotes: [], recetasPropias: {}, apartadas: [], propuesta: null,
+    version: 2, lotes: [], recetasPropias: {}, apartadas: [], propuesta: null, variacion: null,
     nevera: { fecha: "", tengo: [] }, extras: {}, alimentos: {},
     ajustes: structuredClone(AJUSTES_INICIALES),
   };
@@ -70,6 +70,7 @@ export function normalizar(v: Partial<Datos> & Suelto): Datos {
     recetasPropias: Object.fromEntries(Object.entries(propias).map(([k, r]) => [k, migrarReceta(r)])),
     apartadas: Array.isArray(v.apartadas) ? v.apartadas : [],
     propuesta: typeof v.propuesta === "string" ? v.propuesta : null,
+    variacion: v.variacion && typeof v.variacion.recetaId === "string" && obj(v.variacion.factor) ? v.variacion : null,
     nevera: v.nevera && Array.isArray(v.nevera.tengo) ? v.nevera : base.nevera,
     extras: (obj(v.extras) as Datos["extras"]) ?? {},
     alimentos: (obj(v.alimentos) as Datos["alimentos"]) ?? {},

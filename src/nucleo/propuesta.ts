@@ -44,11 +44,25 @@ export function otraIdea(d: Datos): Datos {
   return { ...d, propuesta: lista[(i + 1) % lista.length].id };
 }
 
-export const proponer = (d: Datos, recetaId: string): Datos => ({ ...d, propuesta: recetaId });
+/** Elegir qué cocinar. Los cambios de cantidades de otra receta se descartan. */
+export const proponer = (d: Datos, recetaId: string): Datos =>
+  ({ ...d, propuesta: recetaId, variacion: d.variacion?.recetaId === recetaId ? d.variacion : null });
+
+/** Cambia la cantidad de un ingrediente SOLO para el próximo batch de esa receta. `factor` = de hoy / de la receta. */
+export function cambiarCantidad(d: Datos, recetaId: string, alimentoId: string, factor: number): Datos {
+  const antes = d.variacion?.recetaId === recetaId ? d.variacion.factor : {};
+  const nuevo = { ...antes, [alimentoId]: Math.max(0, factor) };
+  if (Math.abs(nuevo[alimentoId] - 1) < 0.005) delete nuevo[alimentoId];
+  return { ...d, variacion: Object.keys(nuevo).length ? { recetaId, factor: nuevo } : null };
+}
+
+/** Cambios de hoy para esa receta ({} si se hace como dice la receta). */
+export const factorDe = (d: Datos, recetaId: string) => (d.variacion?.recetaId === recetaId ? d.variacion.factor : {});
 
 /* ---------------- lista de ingredientes ---------------- */
 
-export interface Linea { alimentoId: string; nombre: string; gramos: number; aprox: string | null }
+/** `gramos`: los de hoy. `receta`: los de la receta (iguales si no has cambiado nada). `crudo`: los de la receta sin redondear. */
+export interface Linea { alimentoId: string; nombre: string; gramos: number; aprox: string | null; receta: number; crudo: number; cambiado: boolean }
 
 const redondeoGramos = (g: number) => (g < 10 ? Math.max(1, Math.round(g)) : g < 100 ? Math.round(g / 5) * 5 : Math.round(g / 10) * 10);
 
@@ -67,8 +81,8 @@ export function enUnidades(gramos: number, u: Unidad | undefined): string | null
   return u.paso === 1 && u.gramos <= 60 ? `${n} ${plural}` : `≈ ${fraccion(n)} ${plural}`;
 }
 
-/** Ingredientes para `raciones` raciones al tamaño elegido, en el orden de la receta. */
-export function lista(r: Receta, raciones: number, tamano: number): Linea[] {
+/** Ingredientes para `raciones` raciones al tamaño elegido, en el orden de la receta, con los cambios de hoy. */
+export function lista(r: Receta, raciones: number, tamano: number, factor: Record<string, number> = {}): Linea[] {
   const f = raciones * (tamano / 100);
   // Si un ingrediente sale en varias partes (el ajo del curry y el del arroz), se suma una vez.
   const juntos = new Map<string, { nombre: string; gramos: number; unidad?: Unidad }>();
@@ -77,7 +91,14 @@ export function lista(r: Receta, raciones: number, tamano: number): Linea[] {
     x.gramos += i.gramos * f;
     juntos.set(i.alimentoId, x);
   }
-  return [...juntos].map(([alimentoId, x]) => ({ alimentoId, nombre: x.nombre, gramos: redondeoGramos(x.gramos), aprox: enUnidades(x.gramos, x.unidad) }));
+  return [...juntos].map(([alimentoId, x]) => {
+    const f = factor[alimentoId];
+    const hoy = f === undefined ? x.gramos : x.gramos * f;
+    return {
+      alimentoId, nombre: x.nombre, crudo: x.gramos, receta: redondeoGramos(x.gramos), cambiado: f !== undefined,
+      gramos: f === undefined ? redondeoGramos(hoy) : Math.round(hoy), aprox: hoy > 0 ? enUnidades(hoy, x.unidad) : null,
+    };
+  });
 }
 
 /** Texto para copiar y pegar en las notas o en WhatsApp. */
